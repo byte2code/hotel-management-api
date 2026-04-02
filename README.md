@@ -1,10 +1,10 @@
 # Hotel Management API
 
-Spring Boot REST API for managing hotel records with in-memory storage, validation, and basic CRUD endpoints.
+Spring Boot REST API for managing hotel records with in-memory storage, validation, CRUD endpoints, and rating-service integration through a dedicated RestTemplate communicator.
 
 ## Overview
 
-This project demonstrates a compact Spring Boot REST application for managing hotel data. It is designed as a learning project that shows how controllers, services, validation, and exception handling work together in a simple API without introducing database complexity.
+This project demonstrates a compact Spring Boot REST application for managing hotel data. It extends the original CRUD version by integrating a separate rating service so hotel creation, lookup, update, and delete operations can synchronize rating information across services while keeping the main hotel workflow easy to follow.
 
 ## Concepts and Features Covered
 
@@ -17,6 +17,7 @@ This project demonstrates a compact Spring Boot REST application for managing ho
 - Bean validation for request payloads
 - Custom exception handling for missing hotels
 - In-memory data storage using `List` and `Map`
+- RestTemplate communicator design for rating-service integration
 
 ## Tech Stack
 
@@ -30,7 +31,7 @@ This project demonstrates a compact Spring Boot REST application for managing ho
 ## Project Structure
 
 ```text
-hotel/
+hotel-management-api/
 ├── CHANGELOG.md
 ├── README.md
 ├── pom.xml
@@ -39,6 +40,7 @@ hotel/
 └── src/
     ├── main/
     │   ├── java/com/cn/hotel/
+    │   │   ├── communicator/
     │   │   ├── controller/
     │   │   ├── exceptions/
     │   │   ├── model/
@@ -52,9 +54,9 @@ hotel/
 ## How to Run
 
 1. Open a terminal in the project root.
-2. Run `chmod +x mvnw` once if needed.
-3. Run `./mvnw test`.
-4. Run `./mvnw spring-boot:run`.
+2. Run `./mvnw test`.
+3. Run `./mvnw spring-boot:run`.
+4. Ensure the rating service is available on `http://localhost:8081`.
 5. Use the API under `http://localhost:8080/hotel`.
 
 Available endpoints:
@@ -80,10 +82,10 @@ Example request body:
 
 - Demonstrates a clean controller-service split in a Spring Boot REST project
 - Shows how validation annotations can protect incoming request data
-- Uses a custom not-found exception to return clearer API responses
-- Keeps persistence intentionally simple so the API flow is easy to understand
+- Introduces a dedicated communicator class for external rating-service calls
+- Keeps hotel persistence intentionally simple so the service-integration flow stays easy to understand
 
 ## GitHub Metadata
 
-- Suggested repository description: `Spring Boot REST API for hotel record management with CRUD operations, request validation, and in-memory storage.`
-- Suggested topics: `java`, `spring-boot`, `rest-api`, `hotel-management`, `crud-api`, `validation`, `maven`, `learning-project`, `portfolio-project`
+- Suggested repository description: `Spring Boot REST API for hotel record management with CRUD operations, validation, and rating-service integration through a RestTemplate communicator.`
+- Suggested topics: `java`, `spring-boot`, `rest-api`, `hotel-management`, `crud-api`, `validation`, `resttemplate`, `maven`, `learning-project`, `portfolio-project`

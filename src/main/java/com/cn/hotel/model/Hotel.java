@@ -6,6 +6,8 @@ import jakarta.validation.constraints.Size;
 
 public class Hotel {
 
+	
+	
 	private String id;
 	
 	@Size(min=3)
