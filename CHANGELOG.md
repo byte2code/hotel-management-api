@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## [v3.0.0] - 2026-04-09
+
+### Summary
+Third version of the Hotel Management API that restructures the project around JPA persistence and secured role-based access.
+
+### Highlights
+
+- Replaced in-memory hotel storage with a `HotelRepository` backed by JPA.
+- Added MySQL configuration through `application.yml`.
+- Added HTTP Basic authentication with `NORMAL` and `ADMIN` users.
+- Added `@PreAuthorize` rules to separate read access from management actions.
+- Introduced `HotelRequest` DTO for create requests and removed the earlier rating-service communicator flow.
+
+### Notes
+
+This version significantly improves the project’s architectural learning value by combining persistence layering and security without changing its core hotel-management purpose.
+
 ## [v2.0.0] - 2026-04-02
 
 ### Summary
