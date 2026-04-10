@@ -1,25 +1,26 @@
 # Hotel Management API
 
-Spring Boot REST API for managing hotel records with JPA, MySQL persistence, HTTP Basic security, and role-based endpoint access.
+Spring Boot REST API for managing hotels with MySQL persistence, JWT authentication, and role-based access control.
 
 ## Overview
 
-This project demonstrates a compact Spring Boot REST application for hotel data management. It evolves the earlier in-memory version into a database-backed API with repository-based persistence, DTO-driven creation flow, and security rules that separate admin-only management actions from normal-user read access.
+This project demonstrates a compact Spring Boot REST application for hotel data management. It uses repository-backed JPA persistence, JWT-based stateless authentication, public user registration, and role-protected hotel endpoints to model a simple secured admin-and-user workflow.
 
 ## Concepts and Features Covered
 
 - Spring Boot REST API setup
 - Spring Data JPA repository pattern
 - MySQL-backed persistence
-- HTTP Basic authentication with Spring Security
-- In-memory users with `NORMAL` and `ADMIN` roles
+- Spring Security with JWT authentication
+- Stateless session policy with a custom JWT filter
 - Method-level authorization with `@PreAuthorize`
-- DTO-based hotel creation requests
+- Public user registration and token-based login flow
+- Custom `UserDetailsService` for username-based lookup
 - `POST` endpoint for creating hotel records
 - `GET` endpoint for retrieving a hotel by ID
 - `GET` endpoint for listing all hotels
 - `DELETE` endpoint for removing a hotel by ID
-- JPA entity mapping with generated primary keys
+- `GET` endpoint for listing registered users
 
 ## Tech Stack
 
@@ -31,6 +32,7 @@ This project demonstrates a compact Spring Boot REST application for hotel data 
 - MySQL
 - Maven
 - Lombok
+- JJWT
 - JUnit 5
 
 ## Project Structure
@@ -48,15 +50,16 @@ hotel/
     │   │   ├── config/
     │   │   ├── controller/
     │   │   ├── dto/
+    │   │   ├── jwt/
     │   │   ├── model/
     │   │   ├── repository/
+    │   │   ├── security/
     │   │   ├── service/
     │   │   └── HotelApplication.java
     │   └── resources/
     │       └── application.yml
     └── test/
         └── java/com/cn/hotel/
-            └── HotelApplicationTests.java
 ```
 
 ## How to Run
@@ -65,18 +68,15 @@ hotel/
 2. Update the MySQL connection values in `src/main/resources/application.yml` if needed.
 3. Run `mvn test`.
 4. Run `mvn spring-boot:run`.
-5. Use HTTP Basic authentication with one of the configured users:
-   Username: `tony`
-   Password: `password`
-   Role: `NORMAL`
-
-   Username: `steve`
-   Password: `nopassword`
-   Role: `ADMIN`
-6. Use the API under `http://localhost:8082/hotel`.
+5. Register a user with `POST /user/register`.
+6. Obtain a token with `POST /auth/login`.
+7. Use protected endpoints with `Authorization: Bearer <token>`.
 
 Available endpoints:
 
+- `POST /auth/login`
+- `GET /user`
+- `POST /user/register`
 - `POST /hotel/create`
 - `GET /hotel/id/{id}`
 - `GET /hotel/getAll`
@@ -84,10 +84,29 @@ Available endpoints:
 
 Access notes:
 
-- `ADMIN` users can create, list, and delete hotels
+- `/user/register` and `/auth/login` are public
+- `ADMIN` users can create, list, and delete hotels, and list users
 - `NORMAL` users can retrieve hotels by ID
 
-Example request body:
+Example request body for user registration:
+
+```json
+{
+  "username": "john",
+  "password": "john123"
+}
+```
+
+Example request body for login:
+
+```json
+{
+  "username": "john",
+  "password": "john123"
+}
+```
+
+Example request body for hotel creation:
 
 ```json
 {
@@ -99,12 +118,12 @@ Example request body:
 
 ## Learning Highlights
 
-- Demonstrates the shift from in-memory state to repository-backed JPA persistence
-- Shows how DTOs can keep request input separate from the persistence entity
-- Uses role-based authorization to separate read and management actions
-- Keeps the API compact and focused for learning Spring Security and JPA together
+- Demonstrates the shift from basic auth to stateless JWT authentication in Spring Security
+- Shows how a custom filter can authenticate requests from bearer tokens
+- Uses JPA repositories to keep persistence simple while focusing on the security flow
+- Keeps the API compact and readable for learning role-based endpoint protection
 
 ## GitHub Metadata
 
-- Suggested repository description: `Spring Boot REST API for hotel record management with JPA, MySQL persistence, HTTP Basic security, and role-based access control.`
-- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-security`, `spring-data-jpa`, `mysql`, `rest-api`, `hotel-management`, `basic-auth`, `maven`, `learning-project`, `portfolio-project`
+- Suggested repository description: `Spring Boot REST API for hotel record management with MySQL persistence, JWT authentication, and role-based access control.`
+- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-security`, `spring-data-jpa`, `mysql`, `rest-api`, `hotel-management`, `jwt`, `maven`, `learning-project`, `portfolio-project`

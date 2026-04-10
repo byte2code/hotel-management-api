@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## [v4.0.0] - 2026-04-10
+
+### Summary
+Fourth version of the Hotel Management API that upgrades the security model from HTTP Basic authentication to JWT-based stateless authentication.
+
+### Highlights
+
+- Added `POST /auth/login` for token-based authentication.
+- Added `AuthController` and `AuthService` for login and JWT issuance.
+- Added `JwtAuthenticationFilter` and `JwtAuthenticationHelper` for bearer-token request handling.
+- Added user registration and user-list endpoints through `UserController`.
+- Refreshed the README to position the project as a JWT-secured hotel management API.
+
+### Notes
+
+This version improves the project’s learning value by introducing stateless authentication while keeping the hotel-management workflow compact.
+
 ## [v3.0.0] - 2026-04-09
 
 ### Summary
