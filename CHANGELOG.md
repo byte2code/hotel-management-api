@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## [v5.0.0] - 2026-04-17
+
+### Summary
+Fifth version of the Hotel Management API that strengthens the JWT security flow with PBKDF2 password encoding and CSRF token cookie support.
+
+### Highlights
+
+- Replaced BCrypt-based password encoding with `Pbkdf2PasswordEncoder`.
+- Updated user registration to persist PBKDF2-hashed passwords.
+- Added `CookieCsrfTokenRepository` configuration in the security filter chain.
+- Kept the existing JWT login, registration, and role-protected hotel endpoints intact.
+- Refreshed the README to present the project as a stronger Spring Security learning showcase.
+
+### Notes
+
+This version focuses on security configuration refinement rather than changing the main hotel-management workflow.
+
 ## [v4.0.0] - 2026-04-10
 
 ### Summary

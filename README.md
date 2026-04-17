@@ -1,10 +1,10 @@
 # Hotel Management API
 
-Spring Boot REST API for managing hotels with MySQL persistence, JWT authentication, and role-based access control.
+Spring Boot REST API for managing hotels with MySQL persistence, JWT authentication, PBKDF2 password encoding, and role-based access control.
 
 ## Overview
 
-This project demonstrates a compact Spring Boot REST application for hotel data management. It uses repository-backed JPA persistence, JWT-based stateless authentication, public user registration, and role-protected hotel endpoints to model a simple secured admin-and-user workflow.
+This project demonstrates a compact Spring Boot REST application for hotel data management. It uses repository-backed JPA persistence, JWT-based stateless authentication, public user registration, and role-protected hotel endpoints to model a simple secured admin-and-user workflow. This version refines the security setup by switching password handling to PBKDF2 and enabling CSRF token cookie support alongside the existing JWT flow.
 
 ## Concepts and Features Covered
 
@@ -14,6 +14,8 @@ This project demonstrates a compact Spring Boot REST application for hotel data 
 - Spring Security with JWT authentication
 - Stateless session policy with a custom JWT filter
 - Method-level authorization with `@PreAuthorize`
+- PBKDF2 password encoding for registered users
+- CSRF token cookie repository configuration
 - Public user registration and token-based login flow
 - Custom `UserDetailsService` for username-based lookup
 - `POST` endpoint for creating hotel records
@@ -29,6 +31,7 @@ This project demonstrates a compact Spring Boot REST application for hotel data 
 - Spring Web
 - Spring Data JPA
 - Spring Security
+- Spring Validation
 - MySQL
 - Maven
 - Lombok
@@ -87,6 +90,7 @@ Access notes:
 - `/user/register` and `/auth/login` are public
 - `ADMIN` users can create, list, and delete hotels, and list users
 - `NORMAL` users can retrieve hotels by ID
+- CSRF uses `CookieCsrfTokenRepository` while the API remains stateless with JWT authentication
 
 Example request body for user registration:
 
@@ -118,12 +122,12 @@ Example request body for hotel creation:
 
 ## Learning Highlights
 
-- Demonstrates the shift from basic auth to stateless JWT authentication in Spring Security
-- Shows how a custom filter can authenticate requests from bearer tokens
-- Uses JPA repositories to keep persistence simple while focusing on the security flow
-- Keeps the API compact and readable for learning role-based endpoint protection
+- Demonstrates the shift from BCrypt to PBKDF2 password encoding in a Spring Security flow
+- Shows how a custom JWT filter can keep authentication stateless while still exposing public registration and login endpoints
+- Adds CSRF cookie configuration as part of a security-focused learning setup
+- Uses JPA repositories to keep persistence simple while focusing on authentication and role-based endpoint protection
 
 ## GitHub Metadata
 
-- Suggested repository description: `Spring Boot REST API for hotel record management with MySQL persistence, JWT authentication, and role-based access control.`
-- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-security`, `spring-data-jpa`, `mysql`, `rest-api`, `hotel-management`, `jwt`, `maven`, `learning-project`, `portfolio-project`
+- Suggested repository description: `Spring Boot REST API for hotel record management with MySQL persistence, JWT authentication, PBKDF2 password encoding, and role-based access control.`
+- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-security`, `spring-data-jpa`, `mysql`, `rest-api`, `hotel-management`, `jwt`, `pbkdf2`, `maven`, `learning-project`, `portfolio-project`
