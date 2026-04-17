@@ -1,27 +1,24 @@
 # Hotel Management API
 
-Spring Boot REST API for managing hotels with MySQL persistence, JWT authentication, PBKDF2 password encoding, and role-based access control.
+Spring Boot REST API for managing hotels with MySQL persistence, JWT authentication, and rating-service integration via `RestTemplate`.
 
 ## Overview
 
-This project demonstrates a compact Spring Boot REST application for hotel data management. It uses repository-backed JPA persistence, JWT-based stateless authentication, public user registration, and role-protected hotel endpoints to model a simple secured admin-and-user workflow. This version refines the security setup by switching password handling to PBKDF2 and enabling CSRF token cookie support alongside the existing JWT flow.
+This project demonstrates a compact Spring Boot REST application for hotel data management. It uses repository-backed JPA persistence, JWT-based stateless authentication, public user registration, and role-protected hotel endpoints. In this version, hotel lookup by ID enriches the hotel rating by calling an external rating service.
 
 ## Concepts and Features Covered
 
 - Spring Boot REST API setup
 - Spring Data JPA repository pattern
 - MySQL-backed persistence
-- Spring Security with JWT authentication
-- Stateless session policy with a custom JWT filter
+- Spring Security with JWT authentication (stateless)
 - Method-level authorization with `@PreAuthorize`
-- PBKDF2 password encoding for registered users
-- CSRF token cookie repository configuration
-- Public user registration and token-based login flow
-- Custom `UserDetailsService` for username-based lookup
-- `POST` endpoint for creating hotel records
-- `GET` endpoint for retrieving a hotel by ID
+- User registration and token-based login flow
+- `RestTemplate` communicator pattern for calling an external rating service
+- `GET` endpoint for retrieving a hotel by ID (rating fetched from rating service)
 - `GET` endpoint for listing all hotels
-- `DELETE` endpoint for removing a hotel by ID
+- `POST` endpoint for creating a hotel record
+- `DELETE` endpoint for deleting a hotel record
 - `GET` endpoint for listing registered users
 
 ## Tech Stack
@@ -36,7 +33,6 @@ This project demonstrates a compact Spring Boot REST application for hotel data 
 - Maven
 - Lombok
 - JJWT
-- JUnit 5
 
 ## Project Structure
 
@@ -48,32 +44,33 @@ hotel/
 ├── mvnw
 ├── mvnw.cmd
 └── src/
-    ├── main/
-    │   ├── java/com/cn/hotel/
-    │   │   ├── config/
-    │   │   ├── controller/
-    │   │   ├── dto/
-    │   │   ├── jwt/
-    │   │   ├── model/
-    │   │   ├── repository/
-    │   │   ├── security/
-    │   │   ├── service/
-    │   │   └── HotelApplication.java
-    │   └── resources/
-    │       └── application.yml
-    └── test/
-        └── java/com/cn/hotel/
+    └── main/
+        ├── java/com/cn/hotel/
+        │   ├── communicator/
+        │   ├── config/
+        │   ├── controller/
+        │   ├── dto/
+        │   ├── exceptions/
+        │   ├── jwt/
+        │   ├── model/
+        │   ├── repository/
+        │   ├── security/
+        │   ├── service/
+        │   └── HotelApplication.java
+        └── resources/
+            └── application.yml
 ```
 
 ## How to Run
 
 1. Open a terminal in the project root.
 2. Update the MySQL connection values in `src/main/resources/application.yml` if needed.
-3. Run `mvn test`.
-4. Run `mvn spring-boot:run`.
-5. Register a user with `POST /user/register`.
-6. Obtain a token with `POST /auth/login`.
-7. Use protected endpoints with `Authorization: Bearer <token>`.
+3. Ensure the rating service is available at `http://localhost:8081`.
+4. Run `mvn test`.
+5. Run `mvn spring-boot:run`.
+6. Register a user with `POST /user/register`.
+7. Obtain a token with `POST /auth/login`.
+8. Call protected endpoints with `Authorization: Bearer <token>`.
 
 Available endpoints:
 
@@ -85,12 +82,11 @@ Available endpoints:
 - `GET /hotel/getAll`
 - `DELETE /hotel/remove/id/{id}`
 
-Access notes:
+Notes:
 
-- `/user/register` and `/auth/login` are public
-- `ADMIN` users can create, list, and delete hotels, and list users
-- `NORMAL` users can retrieve hotels by ID
-- CSRF uses `CookieCsrfTokenRepository` while the API remains stateless with JWT authentication
+- `/user/register` and `/auth/login` are public.
+- `GET /hotel/id/{id}` expects the `Authorization` header and forwards the JWT to the rating service.
+- Roles are enforced with `@PreAuthorize` (`ADMIN` for create/list/delete, `NORMAL` for get-by-id).
 
 Example request body for user registration:
 
@@ -120,14 +116,8 @@ Example request body for hotel creation:
 }
 ```
 
-## Learning Highlights
-
-- Demonstrates the shift from BCrypt to PBKDF2 password encoding in a Spring Security flow
-- Shows how a custom JWT filter can keep authentication stateless while still exposing public registration and login endpoints
-- Adds CSRF cookie configuration as part of a security-focused learning setup
-- Uses JPA repositories to keep persistence simple while focusing on authentication and role-based endpoint protection
-
 ## GitHub Metadata
 
-- Suggested repository description: `Spring Boot REST API for hotel record management with MySQL persistence, JWT authentication, PBKDF2 password encoding, and role-based access control.`
-- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-security`, `spring-data-jpa`, `mysql`, `rest-api`, `hotel-management`, `jwt`, `pbkdf2`, `maven`, `learning-project`, `portfolio-project`
+- Suggested repository description: `Spring Boot REST API for hotel record management with MySQL persistence, JWT authentication, and rating-service integration via RestTemplate.`
+- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-security`, `spring-data-jpa`, `mysql`, `rest-api`, `hotel-management`, `jwt`, `resttemplate`, `microservices`, `maven`, `learning-project`, `portfolio-project`
+

@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file.
 
+## [v6.0.0] - 2026-04-17
+
+### Summary
+Sixth version of the Hotel Management API that adds rating-service integration so hotel lookup can fetch the latest rating from an external service.
+
+### Highlights
+
+- Added `RatingServiceCommunicator` (RestTemplate-based) for rating-service calls.
+- Added `RatingResponse` DTO and `HttpRatingServiceNotFound` exception.
+- Updated `GET /hotel/id/{id}` to accept the `Authorization` header and forward the JWT to the rating service.
+- Kept the existing JWT login and role-protected hotel endpoints intact.
+
+### Notes
+
+This version introduces inter-service communication for read-time enrichment of hotel ratings.
+
 ## [v5.0.0] - 2026-04-17
 
 ### Summary
@@ -85,3 +101,4 @@ Initial publication of the Hotel Management API as a clean, portfolio-ready Spri
 ### Notes
 
 This version establishes the project as a compact learning showcase for building a REST API with Spring Boot and in-memory data storage.
+

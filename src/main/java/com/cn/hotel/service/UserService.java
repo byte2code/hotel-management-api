@@ -3,7 +3,6 @@ package com.cn.hotel.service;
 import java.util.List;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.cn.hotel.dto.UserRequest;
@@ -20,10 +19,10 @@ public class UserService {
 	}
 
 	public void createUser(UserRequest userRequest) {
-//		BCryptPasswordEncoder bCryptPasswordEncoder= new BCryptPasswordEncoder();
-		Pbkdf2PasswordEncoder passwordEncoder = new Pbkdf2PasswordEncoder();
-		String encodedPassword = passwordEncoder.encode(userRequest.getPassword());
 		
+		BCryptPasswordEncoder bCryptPasswordEncoder= new BCryptPasswordEncoder();
+		String encodedPassword = bCryptPasswordEncoder.encode(userRequest.getPassword());
+				
 		User user = new User();
 		user.setUsername(userRequest.getUsername());
 		user.setPassword(encodedPassword);
