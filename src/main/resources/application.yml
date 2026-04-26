@@ -1,11 +1,44 @@
 spring:
+  application:
+    name: hotelDemo
   datasource:
-    url: jdbc:mysql://localhost:3306/hotel
-    username: root
-    password: root@123
+    password: Password~1234
+    url: jdbc:mysql://ajaydemosqlserver.mysql.database.azure.com:3306/hotel?sessionVariables=sql_mode='NO_ENGINE_SUBSTITUTION'&jdbcCompliantTruncation=false&DB_CLOSE_ON_EXIT=FALSE 
+    username: demouser
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
-    hibernate.ddl-auto: update
+    generate-ddl: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    show-sql: true
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: hotelDemoApplication
+            client-secret: 9nfmUroXDejMQnCSKxF3VNHukfKFPoaK
+            scope: openid+profile+email
+            authorization-grant-type: authorization_code
+          google:
+            client-id: <GOOGLE_CLIENT_ID>
+            client-secret: <GOOGLE_CLIENT_SECRET>
+        provider:
+          keycloak:
+            issuer-uri: https://lemur-12.cloud-iam.com/auth/realms/hotel-demo
+
 server:
   port: 8082
- 
+  
+keycloak:
+  realm: hotel-demo
+  auth-server-url: https://lemur-12.cloud-iam.com/auth
+  resource: hotelDemoApplication
+  public-client: true
+  bearer-only: true
+  
+
+  

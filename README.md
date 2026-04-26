@@ -1,34 +1,36 @@
 # Hotel Management API
 
-Spring Boot REST API for managing hotels with MySQL persistence, JWT authentication, and rating-service integration via `RestTemplate`.
+Spring Boot REST API for managing hotels with MySQL persistence, JWT authentication, and OAuth2 login support via Keycloak and Google.
 
 ## Overview
 
-This project demonstrates a compact Spring Boot REST application for hotel data management. It uses repository-backed JPA persistence, JWT-based stateless authentication, public user registration, and role-protected hotel endpoints. In this version, hotel lookup by ID enriches the hotel rating by calling an external rating service.
+This release keeps the hotel-management workflow intact while refreshing the security layer. The application supports Keycloak-backed JWT/resource-server access, Google OAuth2 login, and role-based endpoint protection through Spring Security annotations.
 
 ## Concepts and Features Covered
 
 - Spring Boot REST API setup
 - Spring Data JPA repository pattern
 - MySQL-backed persistence
-- Spring Security with JWT authentication (stateless)
+- Spring Security with JWT resource-server support
+- OAuth2 login with Keycloak
+- OAuth2 login support for Google
 - Method-level authorization with `@PreAuthorize`
-- User registration and token-based login flow
-- `RestTemplate` communicator pattern for calling an external rating service
-- `GET` endpoint for retrieving a hotel by ID (rating fetched from rating service)
-- `GET` endpoint for listing all hotels
-- `POST` endpoint for creating a hotel record
-- `DELETE` endpoint for deleting a hotel record
-- `GET` endpoint for listing registered users
+- Public user registration and user listing
+- Hotel creation, retrieval, listing, and deletion endpoints
+- `/login` custom page backed by Thymeleaf
+- Google user authority mapping from the local user table
 
 ## Tech Stack
 
 - Java 17
-- Spring Boot 2.7
+- Spring Boot 3.3
 - Spring Web
 - Spring Data JPA
 - Spring Security
 - Spring Validation
+- Spring OAuth2 Client
+- Spring OAuth2 Resource Server
+- Thymeleaf
 - MySQL
 - Maven
 - Lombok
@@ -45,68 +47,62 @@ hotel/
 ├── mvnw.cmd
 └── src/
     └── main/
-        ├── java/com/cn/hotel/
-        │   ├── communicator/
+        ├── java/com/cn/hotelDemo/
         │   ├── config/
         │   ├── controller/
         │   ├── dto/
-        │   ├── exceptions/
-        │   ├── jwt/
         │   ├── model/
         │   ├── repository/
-        │   ├── security/
         │   ├── service/
-        │   └── HotelApplication.java
+        │   └── HotelDemoApplication.java
         └── resources/
-            └── application.yml
+            ├── application.yml
+            └── templates/
+                └── login.html
 ```
 
 ## How to Run
 
 1. Open a terminal in the project root.
-2. Update the MySQL connection values in `src/main/resources/application.yml` if needed.
-3. Ensure the rating service is available at `http://localhost:8081`.
-4. Run `mvn test`.
-5. Run `mvn spring-boot:run`.
-6. Register a user with `POST /user/register`.
-7. Obtain a token with `POST /auth/login`.
-8. Call protected endpoints with `Authorization: Bearer <token>`.
+2. Update MySQL, Keycloak, and Google client settings in `src/main/resources/application.yml` if needed.
+3. Run `mvn test`.
+4. Run `mvn spring-boot:run`.
+5. Open `http://localhost:8082/login` for the custom login page.
+6. Use the API under `http://localhost:8082`.
 
 Available endpoints:
 
-- `POST /auth/login`
-- `GET /user`
-- `POST /user/register`
+- `GET /login`
+- `GET /hotel/userDetail`
 - `POST /hotel/create`
 - `GET /hotel/id/{id}`
 - `GET /hotel/getAll`
 - `DELETE /hotel/remove/id/{id}`
+- `GET /user/getUsers`
+- `GET /user/getUsers/{id}`
+- `POST /user/createUser`
+- `DELETE /user/remove/id/{id}`
 
-Notes:
+Access notes:
 
-- `/user/register` and `/auth/login` are public.
-- `GET /hotel/id/{id}` expects the `Authorization` header and forwards the JWT to the rating service.
-- Roles are enforced with `@PreAuthorize` (`ADMIN` for create/list/delete, `NORMAL` for get-by-id).
+- `/login` is public.
+- `GET /hotel/id/{id}` is for `NORMAL` users.
+- `POST /hotel/create`, `GET /hotel/getAll`, and `DELETE /hotel/remove/id/{id}` are restricted to admin-style access.
+- `GET /hotel/userDetail` uses the authenticated OIDC principal.
+- Google login uses local user-role mapping from the MySQL user table.
 
-Example request body for user registration:
-
-```json
-{
-  "username": "john",
-  "password": "john123"
-}
-```
-
-Example request body for login:
+Example user registration body:
 
 ```json
 {
   "username": "john",
-  "password": "john123"
+  "password": "john123",
+  "email": "john@example.com",
+  "role": "NORMAL"
 }
 ```
 
-Example request body for hotel creation:
+Example hotel creation body:
 
 ```json
 {
@@ -118,6 +114,5 @@ Example request body for hotel creation:
 
 ## GitHub Metadata
 
-- Suggested repository description: `Spring Boot REST API for hotel record management with MySQL persistence, JWT authentication, and rating-service integration via RestTemplate.`
-- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-security`, `spring-data-jpa`, `mysql`, `rest-api`, `hotel-management`, `jwt`, `resttemplate`, `microservices`, `maven`, `learning-project`, `portfolio-project`
-
+- Suggested repository description: `Spring Boot REST API for hotel record management with MySQL persistence, JWT authentication, and OAuth2 login support via Keycloak and Google.`
+- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-security`, `spring-data-jpa`, `mysql`, `rest-api`, `hotel-management`, `jwt`, `oauth2`, `keycloak`, `google-login`, `thymeleaf`, `maven`, `learning-project`, `portfolio-project`

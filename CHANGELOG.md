@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [v7.0.0] - 2026-04-26
+
+### Summary
+Seventh version of the Hotel Management API that modernizes the demo around Spring Boot 3.3, Keycloak, and Google OAuth2 login support.
+
+### Highlights
+
+- Upgraded the application line to the `hotelDemo` package and Spring Boot 3.3.
+- Added Google OAuth2 registration alongside the existing Keycloak configuration.
+- Kept JWT resource-server support in place for token-based access.
+- Preserved the hotel CRUD and user-registration flows under Spring Security method rules.
+- Added a Thymeleaf-backed custom `/login` page.
+- Refreshed the tracked repository tree from the new demo snapshot.
+
+### Notes
+
+This release is primarily a security and configuration refresh rather than a change to the core hotel-management workflow.
+
 ## [v6.0.0] - 2026-04-17
 
 ### Summary
@@ -101,4 +119,3 @@ Initial publication of the Hotel Management API as a clean, portfolio-ready Spri
 ### Notes
 
 This version establishes the project as a compact learning showcase for building a REST API with Spring Boot and in-memory data storage.
-
