@@ -64,7 +64,7 @@ hotel/
 ## How to Run
 
 1. Open a terminal in the project root.
-2. Update MySQL, Keycloak, and Google client settings in `src/main/resources/application.yml` if needed.
+2. Update MySQL, Keycloak, and Google client settings in `src/main/resources/application.yml` if needed. The Google entries are placeholders in the published template.
 3. Run `mvn test`.
 4. Run `mvn spring-boot:run`.
 5. Open `http://localhost:8082/login` for the custom login page.
