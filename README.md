@@ -30,6 +30,7 @@ This release keeps the hotel-management workflow intact while refreshing the sec
 - Room management for hotel inventory
 - Booking creation with request/confirm/reject statuses
 - Date-range validation for room availability
+- Concurrency-safe booking writes using a locked room lookup
 - `/login` custom page backed by Thymeleaf
 - Google user authority mapping from the local user table
 
@@ -187,7 +188,8 @@ flowchart LR
     HotelAPI --> Bookings["Booking lifecycle"]
 
     Hotels --> Rooms
-    Rooms --> Availability["Date-range availability check"]
+    Rooms --> LockedRoom["Pessimistic room lock"]
+    LockedRoom --> Availability["Date-range availability check"]
     Guest --> BookingRequest["POST /hotel/bookings/create"]
     BookingRequest --> BookingService["BookingService"]
     BookingService --> Confirmed["CONFIRMED"]
@@ -200,4 +202,4 @@ flowchart LR
 ## GitHub Metadata
 
 - Suggested repository description: `Spring Boot REST API for hotel, room, and booking management with MySQL persistence, JWT authentication, and OAuth2 login support via Keycloak and Google.`
-- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-security`, `spring-data-jpa`, `spring-validation`, `mysql`, `rest-api`, `hotel-management`, `room-booking`, `jwt`, `oauth2`, `keycloak`, `google-login`, `thymeleaf`, `maven`, `learning-project`, `portfolio-project`
+- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-security`, `spring-data-jpa`, `spring-validation`, `mysql`, `rest-api`, `hotel-management`, `room-booking`, `concurrency`, `pessimistic-locking`, `jwt`, `oauth2`, `keycloak`, `google-login`, `thymeleaf`, `maven`, `learning-project`, `portfolio-project`

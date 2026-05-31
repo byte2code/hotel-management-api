@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file.
 
+## [v8.1.0] - 2026-05-31
+
+### Summary
+Ninth version of the Hotel Management API that makes booking writes concurrency-safe so the same room cannot be double-booked under overlapping requests.
+
+### Highlights
+
+- Added a pessimistic write lock on room lookup during booking creation.
+- Kept the date-overlap validation inside the same transaction so concurrent requests are serialized per room.
+- Preserved the existing booking statuses and rejected-booking response path.
+- Refreshed the README to explain the locked booking flow and updated the GitHub metadata topics.
+
+### Notes
+
+This release improves the reliability of the room-booking workflow under concurrent traffic without changing the public booking API.
+
 ## [v8.0.0] - 2026-05-31
 
 ### Summary

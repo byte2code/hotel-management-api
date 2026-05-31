@@ -40,7 +40,7 @@ public class BookingService {
 	public BookingResponse createBooking(BookingRequest bookingRequest) {
 		User user = userRepository.findById(bookingRequest.getUserId())
 				.orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + bookingRequest.getUserId()));
-		Room room = roomRepository.findById(bookingRequest.getRoomId())
+		Room room = roomRepository.findByIdForUpdate(bookingRequest.getRoomId())
 				.orElseThrow(() -> new IllegalArgumentException("Room not found with ID: " + bookingRequest.getRoomId()));
 		Hotel hotel = hotelRepository.findById(bookingRequest.getHotelId())
 				.orElseThrow(() -> new IllegalArgumentException("Hotel not found with ID: " + bookingRequest.getHotelId()));

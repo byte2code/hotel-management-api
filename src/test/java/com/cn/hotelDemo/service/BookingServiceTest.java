@@ -71,7 +71,7 @@ class BookingServiceTest {
 				LocalDate.now().plusDays(3), 2, "Late check-in");
 
 		when(userRepository.findById(2L)).thenReturn(Optional.of(user));
-		when(roomRepository.findById(10L)).thenReturn(Optional.of(room));
+		when(roomRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(room));
 		when(hotelRepository.findById(1L)).thenReturn(Optional.of(hotel));
 		when(bookingRepository.findByRoomIdAndStatusIn(eq(10L), anyCollection())).thenReturn(List.of());
 		when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -80,6 +80,7 @@ class BookingServiceTest {
 
 		assertEquals(BookingStatus.CONFIRMED, response.getStatus());
 		assertTrue(response.getMessage().contains("confirmed"));
+		verify(roomRepository).findByIdForUpdate(10L);
 	}
 
 	@Test
@@ -105,7 +106,7 @@ class BookingServiceTest {
 				LocalDate.now().plusDays(5), 2, null);
 
 		when(userRepository.findById(2L)).thenReturn(Optional.of(user));
-		when(roomRepository.findById(10L)).thenReturn(Optional.of(room));
+		when(roomRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(room));
 		when(hotelRepository.findById(1L)).thenReturn(Optional.of(hotel));
 		when(bookingRepository.findByRoomIdAndStatusIn(eq(10L), anyCollection())).thenReturn(List.of(existing));
 		when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -114,5 +115,6 @@ class BookingServiceTest {
 
 		assertEquals(BookingStatus.REJECTED, response.getStatus());
 		assertTrue(response.getMessage().contains("requested date range"));
+		verify(roomRepository).findByIdForUpdate(10L);
 	}
 }
