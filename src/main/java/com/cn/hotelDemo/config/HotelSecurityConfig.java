@@ -8,9 +8,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -32,6 +33,7 @@ import com.nimbusds.jose.shaded.gson.internal.LinkedTreeMap;
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
+@ConditionalOnProperty(prefix = "app.security", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class HotelSecurityConfig {
 
 	public final String GOOGLE_ISSUER_URI = "accounts.google.com";
@@ -127,8 +129,11 @@ public class HotelSecurityConfig {
 	
 	@Bean
 	public JwtDecoder jwtDecoder() {
-		return JwtDecoders.fromIssuerLocation("https://lemur-12.cloud-iam.com/auth/realms/hotel-demo");
+		return JwtDecoders.fromIssuerLocation(jwtIssuerUri);
 	}
+
+	@Value("${app.security.jwt-issuer-uri}")
+	private String jwtIssuerUri;
 }
 
 //1. Fetch user from google

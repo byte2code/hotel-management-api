@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## [v8.0.0] - 2026-05-31
+
+### Summary
+Eighth version of the Hotel Management API that introduces room inventory and booking lifecycle management on top of the existing hotel security workflow.
+
+### Highlights
+
+- Added `Room` as a first-class hotel child entity with room number, type, capacity, nightly rate, and status.
+- Added `Booking` as a first-class domain entity tied to hotel, room, and user records.
+- Added booking statuses for request, confirmation, cancellation, and rejection flows.
+- Added room management endpoints for creating and listing rooms by hotel.
+- Added booking endpoints for creating and querying bookings by hotel or user.
+- Refreshed the README architecture, flow diagram, endpoint list, and GitHub metadata suggestions.
+
+### Notes
+
+The new booking flow validates hotel-room ownership, checks date overlap, and records rejected bookings instead of failing silently.
+
 ## [v7.0.0] - 2026-04-26
 
 ### Summary
