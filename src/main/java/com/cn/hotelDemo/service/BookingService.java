@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,7 @@ public class BookingService {
 	}
 
 	@Transactional
+	@CacheEvict(cacheNames = "roomAvailability", allEntries = true)
 	public BookingResponse createBooking(BookingRequest bookingRequest) {
 		User user = userRepository.findById(bookingRequest.getUserId())
 				.orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + bookingRequest.getUserId()));

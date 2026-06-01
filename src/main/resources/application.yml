@@ -16,6 +16,14 @@ spring:
         provider:
           keycloak:
             issuer-uri: ${app.security.jwt-issuer-uri}
+  cache:
+    type: redis
+    redis:
+      time-to-live: 10m
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   datasource:
     password: Password~1234
     url: jdbc:mysql://ajaydemosqlserver.mysql.database.azure.com:3306/hotel?sessionVariables=sql_mode='NO_ENGINE_SUBSTITUTION'&jdbcCompliantTruncation=false&DB_CLOSE_ON_EXIT=FALSE

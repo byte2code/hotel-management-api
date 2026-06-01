@@ -1,6 +1,6 @@
 # Hotel Management API
 
-Spring Boot REST API for managing hotels, rooms, and bookings with MySQL persistence, JWT authentication, and OAuth2 login support via Keycloak and Google.
+Spring Boot REST API for managing hotels, rooms, bookings, and cached room availability with MySQL persistence, Redis caching, JWT authentication, and OAuth2 login support via Keycloak and Google.
 
 ## Overview
 
@@ -13,6 +13,7 @@ This release keeps the hotel-management workflow intact while refreshing the sec
 | API layer | Exposes hotel, room, user, and booking endpoints |
 | Domain layer | Models hotels, rooms, users, and booking lifecycle states |
 | Security layer | Uses JWT, OAuth2 login, and method-level authorization |
+| Cache layer | Caches room-availability lookups in Redis and invalidates them on booking changes |
 | Persistence layer | Stores hotel, room, user, and booking data in MySQL |
 | View layer | Provides a Thymeleaf login page for browser sign-in |
 
@@ -31,6 +32,8 @@ This release keeps the hotel-management workflow intact while refreshing the sec
 - Booking creation with request/confirm/reject statuses
 - Date-range validation for room availability
 - Concurrency-safe booking writes using a locked room lookup
+- Redis-backed caching for room availability searches
+- Cache invalidation when rooms or bookings change
 - `/login` custom page backed by Thymeleaf
 - Google user authority mapping from the local user table
 
@@ -44,7 +47,9 @@ This release keeps the hotel-management workflow intact while refreshing the sec
 - Spring Validation
 - Spring OAuth2 Client
 - Spring OAuth2 Resource Server
+- Spring Cache
 - Thymeleaf
+- Redis
 - MySQL
 - Maven
 - Lombok
@@ -95,6 +100,7 @@ Available endpoints:
 - `POST /hotel/rooms/create`
 - `GET /hotel/rooms/id/{id}`
 - `GET /hotel/rooms/hotel/{hotelId}`
+- `GET /hotel/rooms/hotel/{hotelId}/available?checkInDate=YYYY-MM-DD&checkOutDate=YYYY-MM-DD`
 - `GET /hotel/rooms/getAll`
 - `POST /hotel/bookings/create`
 - `GET /hotel/bookings/id/{id}`
@@ -151,6 +157,10 @@ Example room creation body:
 }
 ```
 
+Example room availability check:
+
+`GET /hotel/rooms/hotel/1/available?checkInDate=2026-06-05&checkOutDate=2026-06-08`
+
 Example booking creation body:
 
 ```json
@@ -186,10 +196,12 @@ flowchart LR
     HotelAPI --> Hotels["Hotel"]
     HotelAPI --> Rooms["Room inventory"]
     HotelAPI --> Bookings["Booking lifecycle"]
+    HotelAPI --> Cache["Redis cache"]
 
     Hotels --> Rooms
     Rooms --> LockedRoom["Pessimistic room lock"]
     LockedRoom --> Availability["Date-range availability check"]
+    Availability --> Cache
     Guest --> BookingRequest["POST /hotel/bookings/create"]
     BookingRequest --> BookingService["BookingService"]
     BookingService --> Confirmed["CONFIRMED"]
@@ -201,5 +213,5 @@ flowchart LR
 
 ## GitHub Metadata
 
-- Suggested repository description: `Spring Boot REST API for hotel, room, and booking management with MySQL persistence, JWT authentication, and OAuth2 login support via Keycloak and Google.`
-- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-security`, `spring-data-jpa`, `spring-validation`, `mysql`, `rest-api`, `hotel-management`, `room-booking`, `concurrency`, `pessimistic-locking`, `jwt`, `oauth2`, `keycloak`, `google-login`, `thymeleaf`, `maven`, `learning-project`, `portfolio-project`
+- Suggested repository description: `Spring Boot REST API for hotel, room, booking, and cached room-availability management with MySQL persistence, Redis caching, JWT authentication, and OAuth2 login support via Keycloak and Google.`
+- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-security`, `spring-data-jpa`, `spring-validation`, `spring-cache`, `redis`, `mysql`, `rest-api`, `hotel-management`, `room-booking`, `room-availability`, `cache-invalidation`, `concurrency`, `pessimistic-locking`, `jwt`, `oauth2`, `keycloak`, `google-login`, `thymeleaf`, `maven`, `learning-project`, `portfolio-project`

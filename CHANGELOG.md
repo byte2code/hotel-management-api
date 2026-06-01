@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented in this file.
 
+## [v8.2.0] - 2026-06-01
+
+### Summary
+New version of the Hotel Management API that adds Redis-backed caching for room-availability searches with invalidation on room and booking changes.
+
+### Highlights
+
+- Added a Redis-backed cache for room-availability lookups by hotel and date range.
+- Added cache eviction when rooms are created and when bookings are written.
+- Added a dedicated room-availability endpoint to the README and API flow diagram.
+- Updated the GitHub metadata suggestions to reflect Redis, caching, and cache invalidation.
+
+### Notes
+
+This release improves search responsiveness for repeated availability checks while keeping the booking logic concurrency-safe.
+
 ## [v8.1.0] - 2026-05-31
 
 ### Summary
