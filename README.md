@@ -4,7 +4,7 @@ Spring Boot REST API for managing hotels, rooms, bookings, and cached room avail
 
 ## Overview
 
-This release keeps the hotel-management workflow intact while refreshing the security layer and extending the domain model. The application supports Keycloak-backed JWT/resource-server access, Google OAuth2 login, and role-based endpoint protection through Spring Security annotations.
+This release keeps the hotel-management workflow intact while refreshing the security layer, extending the domain model, and adding a persistent audit trail. The application supports Keycloak-backed JWT/resource-server access, Google OAuth2 login, Redis-backed room availability, and role-based endpoint protection through Spring Security annotations.
 
 ## Architecture
 
@@ -14,6 +14,7 @@ This release keeps the hotel-management workflow intact while refreshing the sec
 | Domain layer | Models hotels, rooms, users, and booking lifecycle states |
 | Security layer | Uses JWT, OAuth2 login, and method-level authorization |
 | Cache layer | Caches room-availability lookups in Redis and invalidates them on booking changes |
+| Audit layer | Persists booking and security-sensitive actions in an audit log |
 | Persistence layer | Stores hotel, room, user, and booking data in MySQL |
 | View layer | Provides a Thymeleaf login page for browser sign-in |
 
@@ -34,6 +35,7 @@ This release keeps the hotel-management workflow intact while refreshing the sec
 - Concurrency-safe booking writes using a locked room lookup
 - Redis-backed caching for room availability searches
 - Cache invalidation when rooms or bookings change
+- Persistent audit logging for login, profile access, CRUD, and booking actions
 - `/login` custom page backed by Thymeleaf
 - Google user authority mapping from the local user table
 
@@ -51,6 +53,7 @@ This release keeps the hotel-management workflow intact while refreshing the sec
 - Thymeleaf
 - Redis
 - MySQL
+- Hibernate/JPA auditing patterns
 - Maven
 - Lombok
 - JJWT
@@ -83,7 +86,7 @@ hotel/
 ## How to Run
 
 1. Open a terminal in the project root.
-2. Update MySQL, Keycloak, and Google client settings in `src/main/resources/application.yml` if needed. The Google entries are placeholders in the published template.
+2. Update MySQL, Redis, Keycloak, and Google client settings in `src/main/resources/application.yml` if needed. The Google entries are placeholders in the published template, and Redis defaults to `localhost:6379`.
 3. Run `mvn test`.
 4. Run `mvn spring-boot:run`.
 5. Open `http://localhost:8082/login` for the custom login page.
@@ -107,6 +110,7 @@ Available endpoints:
 - `GET /hotel/bookings/getAll`
 - `GET /hotel/bookings/user/{userId}`
 - `GET /hotel/bookings/hotel/{hotelId}`
+- `GET /audit/getAll`
 - `GET /user/getUsers`
 - `GET /user/getUsers/{id}`
 - `POST /user/createUser`
@@ -118,6 +122,7 @@ Access notes:
 - `GET /hotel/id/{id}` is for `NORMAL` users.
 - `POST /hotel/create`, `GET /hotel/getAll`, and `DELETE /hotel/remove/id/{id}` are restricted to admin-style access.
 - `POST /hotel/rooms/create` and `GET /hotel/rooms/getAll` are admin-only operations.
+- `GET /audit/getAll` is admin-only.
 - `GET /hotel/bookings/getAll` and `GET /hotel/bookings/hotel/{hotelId}` are admin-only operations.
 - `POST /hotel/bookings/create` is available to authenticated hotel users.
 - `GET /hotel/userDetail` uses the authenticated OIDC principal.
@@ -186,32 +191,60 @@ Example booking response:
 }
 ```
 
-## Flow Diagram
+## Authentication Flow
+
+```mermaid
+flowchart LR
+    Browser[Browser/User] --> Login["GET /login"]
+    Login --> Keycloak["Keycloak OIDC"]
+    Login --> Google["Google OIDC"]
+    Keycloak --> Token["JWT / OIDC claims"]
+    Google --> Token
+    Token --> Security["HotelSecurityConfig"]
+    Security --> RoleMap["Role mapping from token + local user table"]
+    RoleMap --> Secured["@PreAuthorize protected endpoints"]
+    Secured --> Audit["Audit log entry"]
+```
+
+## Booking Flow
+
+```mermaid
+flowchart LR
+    Guest[Authenticated Guest] --> BookingRequest["POST /hotel/bookings/create"]
+    BookingRequest --> RoomLock["Pessimistic room lock"]
+    RoomLock --> Availability["Date-range overlap check"]
+    Availability -->|available| Confirmed["CONFIRMED booking"]
+    Availability -->|conflict| Rejected["REJECTED booking"]
+    Confirmed --> CacheEvict["Evict room-availability cache"]
+    Rejected --> CacheEvict
+    Confirmed --> Audit["Audit log entry"]
+    Rejected --> Audit
+    Confirmed --> Persist["Persist booking + booking reference"]
+    Rejected --> Persist
+```
+
+## System Flow
 
 ```mermaid
 flowchart LR
     Guest[Authenticated Guest] --> UserAPI["/user/*"]
     Guest --> HotelAPI["/hotel/*"]
+    Guest --> AuditAPI["/audit/*"]
 
     HotelAPI --> Hotels["Hotel"]
     HotelAPI --> Rooms["Room inventory"]
     HotelAPI --> Bookings["Booking lifecycle"]
     HotelAPI --> Cache["Redis cache"]
+    HotelAPI --> Audit["Audit trail"]
 
     Hotels --> Rooms
     Rooms --> LockedRoom["Pessimistic room lock"]
     LockedRoom --> Availability["Date-range availability check"]
     Availability --> Cache
-    Guest --> BookingRequest["POST /hotel/bookings/create"]
-    BookingRequest --> BookingService["BookingService"]
-    BookingService --> Confirmed["CONFIRMED"]
-    BookingService --> Rejected["REJECTED"]
-    BookingService --> HotelEntity["Hotel"]
-    BookingService --> RoomEntity["Room"]
-    BookingService --> UserEntity["User"]
+    Bookings --> Audit
 ```
 
 ## GitHub Metadata
 
-- Suggested repository description: `Spring Boot REST API for hotel, room, booking, and cached room-availability management with MySQL persistence, Redis caching, JWT authentication, and OAuth2 login support via Keycloak and Google.`
-- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-security`, `spring-data-jpa`, `spring-validation`, `spring-cache`, `redis`, `mysql`, `rest-api`, `hotel-management`, `room-booking`, `room-availability`, `cache-invalidation`, `concurrency`, `pessimistic-locking`, `jwt`, `oauth2`, `keycloak`, `google-login`, `thymeleaf`, `maven`, `learning-project`, `portfolio-project`
+- Suggested repository description: `Spring Boot REST API for hotel, room, booking, cached room-availability, and audit-log management with MySQL persistence, Redis caching, JWT authentication, and OAuth2 login support via Keycloak and Google.`
+- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-security`, `spring-data-jpa`, `spring-validation`, `spring-cache`, `redis`, `mysql`, `rest-api`, `hotel-management`, `room-booking`, `room-availability`, `cache-invalidation`, `audit-log`, `observability`, `concurrency`, `pessimistic-locking`, `jwt`, `oauth2`, `keycloak`, `google-login`, `thymeleaf`, `maven`, `learning-project`, `portfolio-project`

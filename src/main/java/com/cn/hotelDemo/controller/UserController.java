@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.cn.hotelDemo.dto.UserRequest;
 import com.cn.hotelDemo.model.User;
+import com.cn.hotelDemo.service.AuditService;
 import com.cn.hotelDemo.service.UserService;
 
 @RestController
@@ -21,6 +22,9 @@ public class UserController {
     
     @Autowired
     UserService userService;
+
+    @Autowired
+    AuditService auditService;
 
     @GetMapping("/getUsers")
     public List<User> getUsers() {
@@ -35,13 +39,17 @@ public class UserController {
     @PostMapping("/createUser")
 	public void createUser(@RequestBody UserRequest userRequest)
 	{
-		userService.createUser(userRequest);
+		User createdUser = userService.createUser(userRequest);
+		auditService.record("USER_CREATED", userRequest.getUsername(), "USER", String.valueOf(createdUser.getId()),
+				"SUCCESS", "Public user registration completed for email=%s".formatted(userRequest.getEmail()));
 	}
 
     @DeleteMapping("/remove/id/{id}")
 	public void deleteUserById(@PathVariable Long id)
 	{
 		userService.deleteUserById(id);
+		auditService.record("USER_DELETED", "system", "USER", String.valueOf(id), "SUCCESS",
+				"User delete requested for id=%s".formatted(id));
 		
 	}
 }

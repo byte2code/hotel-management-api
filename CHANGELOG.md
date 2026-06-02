@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## [v8.3.0] - 2026-06-02
+
+### Summary
+New version of the Hotel Management API that adds persistent audit logging for booking and security-sensitive actions, along with updated authentication and booking flow documentation.
+
+### Highlights
+
+- Added an `AuditLog` entity and repository for storing action, actor, resource, status, and timestamp details.
+- Added audit logging for login page access, authenticated profile access, hotel CRUD, room creation, booking writes, and user registration/deletion.
+- Added an admin-only audit log endpoint for reviewing recorded events.
+- Refreshed the README with authentication flow and booking flow diagrams.
+- Updated the GitHub metadata suggestions to include audit-log and observability keywords.
+
+### Notes
+
+The audit trail complements the existing Redis cache and concurrency-safe booking flow by making the security and booking paths easier to trace during reviews and demos.
+
 ## [v8.2.0] - 2026-06-01
 
 ### Summary
