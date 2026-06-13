@@ -83,10 +83,27 @@ hotel/
                 └── login.html
 ```
 
+## Environment Configuration
+
+The application uses environment variables for sensitive or environment-specific settings. Create a `.env` file in the project root or export these variables before running the application:
+
+* `DATASOURCE_URL`: The JDBC connection URL for MySQL (default: Azure MySQL database URI)
+* `DATASOURCE_USERNAME`: The MySQL username (default: `demouser`)
+* `DATASOURCE_PASSWORD`: The MySQL password (e.g. `Password~1234`)
+* `KEYCLOAK_CLIENT_SECRET`: Keycloak client secret for OIDC registration
+* `KEYCLOAK_ISSUER_URI`: Keycloak token issuer realm URI
+* `KEYCLOAK_AUTH_SERVER_URL`: Keycloak authentication server endpoint URL
+* `GOOGLE_CLIENT_ID`: Google OAuth client ID (optional)
+* `GOOGLE_CLIENT_SECRET`: Google OAuth client secret (optional)
+* `REDIS_HOST`: Redis server hostname (default: `localhost`)
+* `REDIS_PORT`: Redis server port (default: `6379`)
+
+See [.env.example](.env.example) for a complete template.
+
 ## How to Run
 
 1. Open a terminal in the project root.
-2. Update MySQL, Redis, Keycloak, and Google client settings in `src/main/resources/application.yml` if needed. The Google entries are placeholders in the published template, and Redis defaults to `localhost:6379`.
+2. Copy `.env.example` to `.env` and configure your credentials and connection strings.
 3. Run `mvn test`.
 4. Run `mvn spring-boot:run`.
 5. Open `http://localhost:8082/login` for the custom login page.

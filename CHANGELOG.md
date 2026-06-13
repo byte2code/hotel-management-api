@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## [v8.4.0] - 2026-06-13
+
+### Summary
+New version of the Hotel Management API that externalizes datasource credentials and security secrets into environment variables for safer and cleaner deployments.
+
+### Highlights
+- Replaced hardcoded database connection properties (username, password, URL) in `application.yml` with property placeholders.
+- Replaced Keycloak client secret and OIDC URLs with configurable environment variables.
+- Added a `.env.example` template file in the project root to help configure environment variables.
+
+### Notes
+This release improves security hygiene by preventing production credentials and identity-provider secrets from being committed directly to public source control.
+
 ## [v8.3.0] - 2026-06-02
 
 ### Summary
