@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [v9.1.0] - 2026-06-13
+
+### Summary
+Added comprehensive Swagger/OpenAPI 3 documentation for the Hotel Management API to enable easy exploration and testing of endpoints.
+
+### Highlights
+- Added `springdoc-openapi-starter-webmvc-ui` dependency to generate OpenAPI v3 documentation.
+- Created `OpenApiConfig` to define global API metadata and `Bearer Authentication` security scheme.
+- Annotated all controllers (`Hotel`, `Room`, `Booking`, `User`, `Audit`, `Login`) with `@Tag`, `@Operation`, and `@SecurityRequirement`.
+- Updated Spring Security configuration to permit unauthenticated access to Swagger UI (`/swagger-ui.html`, `/v3/api-docs/**`).
+
 ## [v9.0.0] - 2026-06-13
 
 ### Summary

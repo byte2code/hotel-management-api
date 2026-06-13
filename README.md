@@ -38,6 +38,7 @@ This release keeps the hotel-management workflow intact while refreshing the sec
 - Persistent audit logging for login, profile access, CRUD, and booking actions
 - `/login` custom page backed by Thymeleaf
 - Google user authority mapping from the local user table
+- **Swagger/OpenAPI 3 integration for interactive API documentation at `/swagger-ui.html`**
 - Global exception handling via `@RestControllerAdvice` for structured JSON error responses
 
 ## Tech Stack

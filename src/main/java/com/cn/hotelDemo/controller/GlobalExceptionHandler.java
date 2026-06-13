@@ -13,10 +13,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.cn.hotelDemo.dto.ErrorResponse;
 
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
+    @ApiResponse(responseCode = "400", description = "Bad Request")
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
         HttpStatus status = HttpStatus.BAD_REQUEST;
         ErrorResponse response = new ErrorResponse(status.value(), "Bad Request", ex.getMessage());
@@ -24,6 +27,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(NoSuchElementException.class)
+    @ApiResponse(responseCode = "404", description = "Not Found")
     public ResponseEntity<ErrorResponse> handleNoSuchElement(NoSuchElementException ex) {
         HttpStatus status = HttpStatus.NOT_FOUND;
         ErrorResponse response = new ErrorResponse(status.value(), "Not Found", "Resource not found: " + ex.getMessage());
@@ -31,6 +35,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ApiResponse(responseCode = "400", description = "Validation Failed")
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         HttpStatus status = HttpStatus.BAD_REQUEST;
         String message = ex.getBindingResult().getFieldErrors().stream()
@@ -41,6 +46,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AccessDeniedException.class)
+    @ApiResponse(responseCode = "403", description = "Forbidden")
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
         HttpStatus status = HttpStatus.FORBIDDEN;
         ErrorResponse response = new ErrorResponse(status.value(), "Forbidden", "Access denied: " + ex.getMessage());
@@ -48,6 +54,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
+    @ApiResponse(responseCode = "500", description = "Internal Server Error")
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         ErrorResponse response = new ErrorResponse(status.value(), "Internal Server Error", "An unexpected error occurred");

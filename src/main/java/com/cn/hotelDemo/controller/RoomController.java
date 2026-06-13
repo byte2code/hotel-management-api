@@ -24,8 +24,14 @@ import com.cn.hotelDemo.service.RoomService;
 
 import jakarta.validation.Valid;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/hotel/rooms")
+@Tag(name = "Room Controller", description = "Endpoints for managing rooms")
+@SecurityRequirement(name = "Bearer Authentication")
 public class RoomController {
 
 	private final RoomService roomService;
@@ -38,6 +44,7 @@ public class RoomController {
 
 	@PostMapping("/create")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
+	@Operation(summary = "Create a new room in a hotel")
 	public ResponseEntity<Room> createRoom(@Valid @RequestBody RoomRequest roomRequest, Authentication authentication) {
 		Room room = roomService.createRoom(roomRequest);
 		auditService.record("ROOM_CREATED", authentication.getName(), "ROOM", String.valueOf(room.getId()), "SUCCESS",
@@ -48,12 +55,14 @@ public class RoomController {
 
 	@GetMapping("/hotel/{hotelId}")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
+	@Operation(summary = "Get all rooms for a specific hotel")
 	public ResponseEntity<List<Room>> getRoomsByHotel(@PathVariable Long hotelId) {
 		return ResponseEntity.ok(roomService.getRoomsByHotelId(hotelId));
 	}
 
 	@GetMapping("/hotel/{hotelId}/available")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
+	@Operation(summary = "Check room availability between dates for a hotel")
 	public ResponseEntity<List<Room>> getAvailableRoomsByHotel(
 			@PathVariable Long hotelId,
 			Authentication authentication,
@@ -68,6 +77,7 @@ public class RoomController {
 
 	@GetMapping("/id/{id}")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
+	@Operation(summary = "Get a room by its ID")
 	public ResponseEntity<Room> getRoomById(@PathVariable Long id) {
 		Room room = roomService.getRoomById(id);
 		if (room == null) {
@@ -78,6 +88,7 @@ public class RoomController {
 
 	@GetMapping("/getAll")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
+	@Operation(summary = "Get all rooms across all hotels (Admin only)")
 	public ResponseEntity<List<Room>> getAllRooms() {
 		return ResponseEntity.ok(roomService.getAllRooms());
 	}

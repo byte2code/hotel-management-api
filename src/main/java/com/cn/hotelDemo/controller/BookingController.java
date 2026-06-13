@@ -20,10 +20,15 @@ import com.cn.hotelDemo.model.BookingStatus;
 import com.cn.hotelDemo.service.AuditService;
 import com.cn.hotelDemo.service.BookingService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/hotel/bookings")
+@Tag(name = "Booking Controller", description = "Endpoints for managing bookings")
+@SecurityRequirement(name = "Bearer Authentication")
 public class BookingController {
 
 	private final BookingService bookingService;
@@ -36,6 +41,7 @@ public class BookingController {
 
 	@PostMapping("/create")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
+	@Operation(summary = "Create a new booking")
 	public ResponseEntity<BookingResponse> createBooking(@Valid @RequestBody BookingRequest bookingRequest,
 			Authentication authentication) {
 		BookingResponse response = bookingService.createBooking(bookingRequest);
@@ -47,6 +53,7 @@ public class BookingController {
 
 	@GetMapping("/id/{id}")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
+	@Operation(summary = "Get a booking by its ID")
 	public ResponseEntity<Booking> getBookingById(@PathVariable Long id) {
 		Booking booking = bookingService.getBookingById(id);
 		if (booking == null) {
@@ -57,24 +64,28 @@ public class BookingController {
 
 	@GetMapping("/getAll")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
+	@Operation(summary = "Get all bookings (Admin only)")
 	public ResponseEntity<List<Booking>> getAllBookings() {
 		return ResponseEntity.ok(bookingService.getAllBookings());
 	}
 
 	@GetMapping("/user/{userId}")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
+	@Operation(summary = "Get bookings by user ID")
 	public ResponseEntity<List<Booking>> getBookingsByUser(@PathVariable Long userId) {
 		return ResponseEntity.ok(bookingService.getBookingsByUserId(userId));
 	}
 
 	@GetMapping("/hotel/{hotelId}")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
+	@Operation(summary = "Get bookings by hotel ID")
 	public ResponseEntity<List<Booking>> getBookingsByHotel(@PathVariable Long hotelId) {
 		return ResponseEntity.ok(bookingService.getBookingsByHotelId(hotelId));
 	}
 
 	@PostMapping("/cancel/{id}")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
+	@Operation(summary = "Cancel a booking by its ID")
 	public ResponseEntity<BookingResponse> cancelBooking(@PathVariable Long id, Authentication authentication) {
 		BookingResponse response = bookingService.cancelBooking(id);
 		auditService.record("BOOKING_CANCELLED", authentication.getName(), "BOOKING",

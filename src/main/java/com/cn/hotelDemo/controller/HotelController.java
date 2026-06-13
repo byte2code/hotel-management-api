@@ -20,8 +20,14 @@ import com.cn.hotelDemo.model.Hotel;
 import com.cn.hotelDemo.service.HotelService;
 import com.cn.hotelDemo.service.AuditService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/hotel")
+@Tag(name = "Hotel Controller", description = "Endpoints for managing hotels")
+@SecurityRequirement(name = "Bearer Authentication")
 public class HotelController {
 
 	@Autowired 
@@ -31,6 +37,7 @@ public class HotelController {
 	AuditService auditService;
 	
 	@GetMapping("/userDetail")
+	@Operation(summary = "Get current authenticated user details from OIDC")
 	public String getDetails(@AuthenticationPrincipal OidcUser oidcUser) {
 		String details = "User name: %s, email: %s".formatted(oidcUser.getFullName(), oidcUser.getEmail());
 		auditService.record("OIDC_PROFILE_VIEWED", oidcUser.getEmail(), "AUTH", oidcUser.getEmail(), "SUCCESS",
@@ -40,6 +47,7 @@ public class HotelController {
 	
 	@PostMapping("/create")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
+	@Operation(summary = "Create a new hotel (Admin only)")
 	public void createHotel(@RequestBody HotelRequest hotelRequest, Authentication authentication)
 	{
 		Hotel createdHotel = hotelService.createHotel(hotelRequest);
@@ -50,6 +58,7 @@ public class HotelController {
 	
 	@GetMapping("/id/{id}")
 	@PreAuthorize("hasRole('NORMAL') or hasAuthority('normal')")
+	@Operation(summary = "Get hotel by ID")
 	public Hotel getHotelById(@PathVariable Long id)
 	{
 		return hotelService.getHotelById(id);
@@ -57,6 +66,7 @@ public class HotelController {
 	
 	@GetMapping("/getAll")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
+	@Operation(summary = "Get all hotels (Admin only)")
 	public List<Hotel> getAllHotels()
 	{
 		return hotelService.getAllHotels();
@@ -64,6 +74,7 @@ public class HotelController {
 	
 	@DeleteMapping("/remove/id/{id}")
 	@PreAuthorize("hasRole('admin') or hasAuthority('admin')")
+	@Operation(summary = "Delete a hotel by ID (Admin only)")
 	public void deleteHotelById(@PathVariable Long id, Authentication authentication)
 	{
 		hotelService.deleteHotelById(id);

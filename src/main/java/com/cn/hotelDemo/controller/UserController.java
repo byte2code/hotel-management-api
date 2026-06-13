@@ -16,8 +16,13 @@ import com.cn.hotelDemo.model.User;
 import com.cn.hotelDemo.service.AuditService;
 import com.cn.hotelDemo.service.UserService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/user")
+@Tag(name = "User Controller", description = "Endpoints for managing users")
 public class UserController {
     
     @Autowired
@@ -27,16 +32,21 @@ public class UserController {
     AuditService auditService;
 
     @GetMapping("/getUsers")
+    @Operation(summary = "Get all users")
+    @SecurityRequirement(name = "Bearer Authentication")
     public List<User> getUsers() {
         return userService.getUsers();
     }
 
     @GetMapping("/getUsers/{id}")
+    @Operation(summary = "Get user by ID")
+    @SecurityRequirement(name = "Bearer Authentication")
     public User getUserById(@PathVariable Long id) {
         return userService.getUserById(id);
     }
 
     @PostMapping("/createUser")
+    @Operation(summary = "Register a new user (Public)")
 	public void createUser(@RequestBody UserRequest userRequest)
 	{
 		User createdUser = userService.createUser(userRequest);
@@ -45,6 +55,8 @@ public class UserController {
 	}
 
     @DeleteMapping("/remove/id/{id}")
+    @Operation(summary = "Delete a user by ID")
+    @SecurityRequirement(name = "Bearer Authentication")
 	public void deleteUserById(@PathVariable Long id)
 	{
 		userService.deleteUserById(id);
