@@ -87,6 +87,24 @@ public class BookingService {
 		return bookingRepository.findByHotelId(hotelId);
 	}
 
+	@Transactional
+	@CacheEvict(cacheNames = "roomAvailability", allEntries = true)
+	public BookingResponse cancelBooking(Long id) {
+		Booking booking = bookingRepository.findById(id)
+				.orElseThrow(() -> new IllegalArgumentException("Booking not found with ID: " + id));
+
+		if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.REJECTED) {
+			throw new IllegalArgumentException("Booking cannot be cancelled because it is already " + booking.getStatus());
+		}
+
+		booking.getStatus(); // Optional logging
+		booking.setStatus(BookingStatus.CANCELLED);
+		bookingRepository.save(booking);
+
+		return new BookingResponse(booking.getBookingReference(), booking.getStatus(),
+				"Booking cancelled successfully", booking.getId());
+	}
+
 	private BookingResponse persistBooking(BookingRequest bookingRequest, User user, Room room, Hotel hotel,
 			BookingStatus status, String message) {
 		Booking booking = new Booking();

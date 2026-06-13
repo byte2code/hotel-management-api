@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [v9.0.0] - 2026-06-13
+
+### Summary
+Major release adding booking cancellation capabilities and enforcing booking state transition rules.
+
+### Highlights
+- Added `/hotel/bookings/cancel/{id}` endpoint to allow users to cancel existing bookings.
+- Implemented state transition rules: bookings can only be cancelled if their status is `REQUESTED` or `CONFIRMED`.
+- Cache eviction added for `roomAvailability` to free up the room when a booking is cancelled.
+- Audit events are recorded for `BOOKING_CANCELLED` actions.
+
 ## [v8.5.2] - 2026-06-13
 
 ### Summary

@@ -72,4 +72,13 @@ public class BookingController {
 	public ResponseEntity<List<Booking>> getBookingsByHotel(@PathVariable Long hotelId) {
 		return ResponseEntity.ok(bookingService.getBookingsByHotelId(hotelId));
 	}
+
+	@PostMapping("/cancel/{id}")
+	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
+	public ResponseEntity<BookingResponse> cancelBooking(@PathVariable Long id, Authentication authentication) {
+		BookingResponse response = bookingService.cancelBooking(id);
+		auditService.record("BOOKING_CANCELLED", authentication.getName(), "BOOKING",
+				String.valueOf(response.getBookingId()), response.getStatus().name(), response.getMessage());
+		return ResponseEntity.ok(response);
+	}
 }

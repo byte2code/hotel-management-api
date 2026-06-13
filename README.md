@@ -124,6 +124,7 @@ Available endpoints:
 - `GET /hotel/rooms/hotel/{hotelId}/available?checkInDate=YYYY-MM-DD&checkOutDate=YYYY-MM-DD`
 - `GET /hotel/rooms/getAll`
 - `POST /hotel/bookings/create`
+- `POST /hotel/bookings/cancel/{id}`
 - `GET /hotel/bookings/id/{id}`
 - `GET /hotel/bookings/getAll`
 - `GET /hotel/bookings/user/{userId}`
