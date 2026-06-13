@@ -105,7 +105,7 @@ See [.env.example](.env.example) for a complete template.
 
 1. Open a terminal in the project root.
 2. Copy `.env.example` to `.env` and configure your credentials and connection strings.
-3. Run `mvn test`.
+3. Run `mvn test` (executes the test suite against an isolated in-memory H2 database, requiring no active MySQL or Redis instances).
 4. Run `mvn spring-boot:run`.
 5. Open `http://localhost:8082/login` for the custom login page.
 6. Use the API under `http://localhost:8082`.

@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## [v8.5.2] - 2026-06-13
+
+### Summary
+Documentation and configuration alignment to clarify isolated test execution against the in-memory H2 database.
+
+### Highlights
+- Added descriptive comments to `src/test/resources/application.yml` highlighting H2 datasource configurations.
+- Updated `README.md` to document that the test suite executes in isolation against H2 without external resource dependencies.
+
 ## [v8.5.1] - 2026-06-13
 
 ### Summary
