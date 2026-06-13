@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [v9.3.0] - 2026-06-14
+
+### Summary
+Added a GitHub Actions CI pipeline that runs `mvn test` on every push and pull request.
+
+### Highlights
+- Created `.github/workflows/ci.yml` with a single `test` job.
+- Uses `actions/setup-java@v4` with Temurin JDK 17 and built-in Maven dependency caching.
+- Tests execute against the H2 in-memory database — no MySQL or Redis required in CI.
+- Updated `README.md` with CI badge, refreshed project structure, tech stack, features, and GitHub metadata.
+
 ## [v9.2.0] - 2026-06-14
 
 ### Summary

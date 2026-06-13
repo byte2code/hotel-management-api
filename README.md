@@ -1,6 +1,8 @@
 # Hotel Management API
 
-Spring Boot REST API for managing hotels, rooms, bookings, and cached room availability with MySQL persistence, Redis caching, JWT authentication, and OAuth2 login support via Keycloak and Google.
+![CI](https://github.com/byte2code/hotel-management-api/actions/workflows/ci.yml/badge.svg)
+
+Spring Boot REST API for managing hotels, rooms, bookings, and cached room availability with MySQL persistence, Redis caching, JWT authentication, OAuth2 login support via Keycloak and Google, Swagger/OpenAPI 3 docs, and GitHub Actions CI.
 
 ## Overview
 
@@ -40,6 +42,8 @@ This release keeps the hotel-management workflow intact while refreshing the sec
 - Google user authority mapping from the local user table
 - **Swagger/OpenAPI 3 integration for interactive API documentation at `/swagger-ui.html`**
 - Global exception handling via `@RestControllerAdvice` for structured JSON error responses
+- Spring Security integration tests with `MockMvc` and `@WithMockUser`
+- **GitHub Actions CI pipeline — automated `mvn test` on every push and pull request**
 
 ## Tech Stack
 
@@ -59,30 +63,41 @@ This release keeps the hotel-management workflow intact while refreshing the sec
 - Maven
 - Lombok
 - JJWT
+- Springdoc OpenAPI (Swagger UI)
+- H2 (test isolation)
+- GitHub Actions (CI)
 
 ## Project Structure
 
 ```text
 hotel/
+├── .github/
+│   └── workflows/
+│       └── ci.yml              ← GitHub Actions CI
 ├── CHANGELOG.md
 ├── README.md
 ├── pom.xml
-├── mvnw
-├── mvnw.cmd
+├── mvnw / mvnw.cmd
 └── src/
-    └── main/
+    ├── main/
+    │   ├── java/com/cn/hotelDemo/
+    │   │   ├── config/          (HotelSecurityConfig, OpenApiConfig)
+    │   │   ├── controller/      (Hotel, Room, Booking, User, Audit, Login, GlobalExceptionHandler)
+    │   │   ├── dto/
+    │   │   ├── model/
+    │   │   ├── repository/
+    │   │   ├── service/
+    │   │   └── HotelDemoApplication.java
+    │   └── resources/
+    │       ├── application.yml
+    │       └── templates/
+    │           └── login.html
+    └── test/
         ├── java/com/cn/hotelDemo/
-        │   ├── config/
-        │   ├── controller/
-        │   ├── dto/
-        │   ├── model/
-        │   ├── repository/
-        │   ├── service/
-        │   └── HotelDemoApplication.java
+        │   ├── controller/      (SecurityIntegrationTest)
+        │   └── service/         (AuditServiceTest, BookingServiceTest, RoomServiceTest)
         └── resources/
-            ├── application.yml
-            └── templates/
-                └── login.html
+            └── application.yml  (H2 in-memory test config)
 ```
 
 ## Environment Configuration
@@ -266,5 +281,5 @@ flowchart LR
 
 ## GitHub Metadata
 
-- Suggested repository description: `Spring Boot REST API for hotel, room, booking, cached room-availability, and audit-log management with MySQL persistence, Redis caching, JWT authentication, and OAuth2 login support via Keycloak and Google.`
-- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-security`, `spring-data-jpa`, `spring-validation`, `spring-cache`, `redis`, `mysql`, `rest-api`, `hotel-management`, `room-booking`, `room-availability`, `cache-invalidation`, `audit-log`, `observability`, `concurrency`, `pessimistic-locking`, `jwt`, `oauth2`, `keycloak`, `google-login`, `thymeleaf`, `maven`, `learning-project`, `portfolio-project`
+- Suggested repository description: `Spring Boot REST API for hotel, room, booking, and audit-log management with MySQL, Redis caching, JWT/OAuth2 auth, Swagger/OpenAPI 3 docs, Spring Security tests, and GitHub Actions CI.`
+- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-boot-3`, `spring-security`, `spring-security-test`, `spring-data-jpa`, `spring-validation`, `spring-cache`, `redis`, `mysql`, `h2-database`, `rest-api`, `hotel-management`, `room-booking`, `room-availability`, `cache-invalidation`, `audit-log`, `observability`, `concurrency`, `pessimistic-locking`, `jwt`, `oauth2`, `keycloak`, `google-login`, `thymeleaf`, `swagger`, `openapi`, `springdoc`, `github-actions`, `ci-cd`, `maven`, `learning-project`, `portfolio-project`
