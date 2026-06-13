@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [v9.4.0] - 2026-06-14
+
+### Summary
+Added shields.io badges to the README and refreshed all architecture diagrams to reflect the full current feature set.
+
+### Highlights
+- Added badges for CI status, Java version, Spring Boot version, test count, and license.
+- Updated Authentication Flow diagram to show `GlobalExceptionHandler` handling 403 denials.
+- Updated Booking Flow diagram to include the cancellation path with state transition validation.
+- Updated System Flow diagram to show Swagger UI, Spring Security as the entry point, `GlobalExceptionHandler` for structured JSON errors, and GitHub Actions CI.
+
 ## [v9.3.0] - 2026-06-14
 
 ### Summary

@@ -1,6 +1,10 @@
 # Hotel Management API
 
 ![CI](https://github.com/byte2code/hotel-management-api/actions/workflows/ci.yml/badge.svg)
+![Java](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-6DB33F?logo=springboot&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-13%20passing-brightgreen?logo=junit5&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
 Spring Boot REST API for managing hotels, rooms, bookings, and cached room availability with MySQL persistence, Redis caching, JWT authentication, OAuth2 login support via Keycloak and Google, Swagger/OpenAPI 3 docs, and GitHub Actions CI.
 
@@ -230,53 +234,70 @@ Example booking response:
 
 ```mermaid
 flowchart LR
-    Browser[Browser/User] --> Login["GET /login"]
+    Browser["🌐 Browser"] --> Login["GET /login"]
     Login --> Keycloak["Keycloak OIDC"]
     Login --> Google["Google OIDC"]
     Keycloak --> Token["JWT / OIDC claims"]
     Google --> Token
     Token --> Security["HotelSecurityConfig"]
     Security --> RoleMap["Role mapping from token + local user table"]
-    RoleMap --> Secured["@PreAuthorize protected endpoints"]
-    Secured --> Audit["Audit log entry"]
+    RoleMap --> PreAuth["@PreAuthorize"]
+    PreAuth --> Endpoint["Controller endpoint"]
+    Endpoint --> Audit["Audit log entry"]
+    PreAuth -->|denied| ExHandler["GlobalExceptionHandler → 403 JSON"]
 ```
 
 ## Booking Flow
 
 ```mermaid
 flowchart LR
-    Guest[Authenticated Guest] --> BookingRequest["POST /hotel/bookings/create"]
-    BookingRequest --> RoomLock["Pessimistic room lock"]
-    RoomLock --> Availability["Date-range overlap check"]
-    Availability -->|available| Confirmed["CONFIRMED booking"]
-    Availability -->|conflict| Rejected["REJECTED booking"]
+    Guest["Authenticated Guest"] --> Create["POST /bookings/create"]
+    Guest --> Cancel["POST /bookings/cancel/{id}"]
+
+    Create --> RoomLock["Pessimistic room lock"]
+    RoomLock --> Overlap["Date-range overlap check"]
+    Overlap -->|available| Confirmed["CONFIRMED"]
+    Overlap -->|conflict| Rejected["REJECTED"]
+
+    Cancel --> StateCheck["Status transition check"]
+    StateCheck -->|valid| Cancelled["CANCELLED"]
+    StateCheck -->|invalid| Error["400 Bad Request JSON"]
+
     Confirmed --> CacheEvict["Evict room-availability cache"]
     Rejected --> CacheEvict
-    Confirmed --> Audit["Audit log entry"]
+    Cancelled --> CacheEvict
+
+    Confirmed --> Audit["Audit log"]
     Rejected --> Audit
-    Confirmed --> Persist["Persist booking + booking reference"]
-    Rejected --> Persist
+    Cancelled --> Audit
 ```
 
 ## System Flow
 
 ```mermaid
 flowchart LR
-    Guest[Authenticated Guest] --> UserAPI["/user/*"]
-    Guest --> HotelAPI["/hotel/*"]
-    Guest --> AuditAPI["/audit/*"]
+    Client["Client / Swagger UI"] --> Security["Spring Security"]
+    Security --> UserAPI["/user/*"]
+    Security --> HotelAPI["/hotel/*"]
+    Security --> AuditAPI["/audit/*"]
+    Security --> SwaggerUI["/swagger-ui.html"]
 
-    HotelAPI --> Hotels["Hotel"]
+    HotelAPI --> Hotels["Hotel CRUD"]
     HotelAPI --> Rooms["Room inventory"]
     HotelAPI --> Bookings["Booking lifecycle"]
-    HotelAPI --> Cache["Redis cache"]
-    HotelAPI --> Audit["Audit trail"]
 
-    Hotels --> Rooms
-    Rooms --> LockedRoom["Pessimistic room lock"]
-    LockedRoom --> Availability["Date-range availability check"]
+    Rooms --> Cache["Redis cache"]
+    Rooms --> LockedRoom["Pessimistic lock"]
+    LockedRoom --> Availability["Date-range check"]
     Availability --> Cache
-    Bookings --> Audit
+
+    Bookings --> Audit["Audit trail"]
+    Hotels --> Audit
+
+    Security -->|error| ExHandler["GlobalExceptionHandler"]
+    ExHandler --> ErrorJSON["Structured JSON errors"]
+
+    CI["GitHub Actions CI"] --> Tests["mvn test on H2"]
 ```
 
 ## GitHub Metadata
