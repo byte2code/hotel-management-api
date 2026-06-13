@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## [v8.5.1] - 2026-06-13
+
+### Summary
+Patch release of the Hotel Management API that improves safety in `HotelService.getHotelById()` by replacing direct optional `.get()` access with `.orElseThrow()`.
+
+### Highlights
+- Refactored `HotelService.getHotelById()` to throw a descriptive `NoSuchElementException` when a hotel ID cannot be found, avoiding generic failures and enabling detailed 404 error payloads.
+
 ## [v8.5.0] - 2026-06-13
 
 ### Summary
