@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [v9.2.0] - 2026-06-14
+
+### Summary
+Added comprehensive Spring Security integration tests.
+
+### Highlights
+- Created `SecurityIntegrationTest.java` using `MockMvc` and `@WithMockUser`.
+- Added test coverage verifying that unauthenticated requests properly return `401 Unauthorized`.
+- Added test coverage verifying that users with insufficient roles receive `403 Forbidden` on restricted endpoints.
+- Validated correct `200 OK` and `404 Not Found` responses for appropriately authenticated requests.
+
 ## [v9.1.0] - 2026-06-13
 
 ### Summary
