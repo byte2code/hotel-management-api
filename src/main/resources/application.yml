@@ -7,12 +7,12 @@ spring:
         registration:
           keycloak:
             client-id: hotelDemoApplication
-            client-secret: 9nfmUroXDejMQnCSKxF3VNHukfKFPoaK
+            client-secret: ${KEYCLOAK_CLIENT_SECRET:}
             scope: openid+profile+email
             authorization-grant-type: authorization_code
           google:
-            client-id: <GOOGLE_CLIENT_ID>
-            client-secret: <GOOGLE_CLIENT_SECRET>
+            client-id: ${GOOGLE_CLIENT_ID:}
+            client-secret: ${GOOGLE_CLIENT_SECRET:}
         provider:
           keycloak:
             issuer-uri: ${app.security.jwt-issuer-uri}
@@ -25,9 +25,9 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
   datasource:
-    password: Password~1234
-    url: jdbc:mysql://ajaydemosqlserver.mysql.database.azure.com:3306/hotel?sessionVariables=sql_mode='NO_ENGINE_SUBSTITUTION'&jdbcCompliantTruncation=false&DB_CLOSE_ON_EXIT=FALSE
-    username: demouser
+    password: ${DATASOURCE_PASSWORD:}
+    url: ${DATASOURCE_URL:jdbc:mysql://ajaydemosqlserver.mysql.database.azure.com:3306/hotel?sessionVariables=sql_mode='NO_ENGINE_SUBSTITUTION'&jdbcCompliantTruncation=false&DB_CLOSE_ON_EXIT=FALSE}
+    username: ${DATASOURCE_USERNAME:demouser}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     generate-ddl: true
@@ -44,11 +44,11 @@ server:
 app:
   security:
     enabled: true
-    jwt-issuer-uri: https://lemur-12.cloud-iam.com/auth/realms/hotel-demo
+    jwt-issuer-uri: ${KEYCLOAK_ISSUER_URI:https://lemur-12.cloud-iam.com/auth/realms/hotel-demo}
 
 keycloak:
   realm: hotel-demo
-  auth-server-url: https://lemur-12.cloud-iam.com/auth
+  auth-server-url: ${KEYCLOAK_AUTH_SERVER_URL:https://lemur-12.cloud-iam.com/auth}
   resource: hotelDemoApplication
   public-client: true
   bearer-only: true
