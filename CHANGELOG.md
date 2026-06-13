@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [v8.5.0] - 2026-06-13
+
+### Summary
+New version of the Hotel Management API that adds a global exception handler (`@ControllerAdvice`) to return structured JSON responses for validation and business logic exceptions instead of default 500 errors or standard Spring error pages.
+
+### Highlights
+- Added a `GlobalExceptionHandler` to handle `IllegalArgumentException`, `NoSuchElementException`, `MethodArgumentNotValidException`, and `AccessDeniedException`.
+- Created an `ErrorResponse` DTO to standardize error response payloads containing HTTP status, error classification, and detailed message.
+
+### Notes
+This release improves API robustness and error diagnostics for client integrations by standardizing error payloads across all endpoints.
+
 ## [v8.4.0] - 2026-06-13
 
 ### Summary
