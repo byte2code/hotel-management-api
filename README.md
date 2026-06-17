@@ -80,14 +80,16 @@ hotel/
 │       └── ci.yml              ← GitHub Actions CI
 ├── CHANGELOG.md
 ├── README.md
+├── docker-compose.override.yml.example
 ├── pom.xml
 ├── mvnw / mvnw.cmd
 └── src/
     ├── main/
     │   ├── java/com/cn/hotelDemo/
     │   │   ├── config/          (HotelSecurityConfig, OpenApiConfig)
-    │   │   ├── controller/      (Hotel, Room, Booking, User, Audit, Login, GlobalExceptionHandler)
+    │   │   ├── controller/      (Hotel, Room, Booking, User, Audit, Login)
     │   │   ├── dto/
+    │   │   ├── exception/       (HotelNotFoundException, UserNotFoundException, ApiError, GlobalExceptionHandler)
     │   │   ├── model/
     │   │   ├── repository/
     │   │   ├── service/
@@ -98,6 +100,7 @@ hotel/
     │           └── login.html
     └── test/
         ├── java/com/cn/hotelDemo/
+        │   ├── config/          (HotelSecurityConfigTest)
         │   ├── controller/      (SecurityIntegrationTest)
         │   └── service/         (AuditServiceTest, BookingServiceTest, RoomServiceTest)
         └── resources/
@@ -106,11 +109,11 @@ hotel/
 
 ## Environment Configuration
 
-The application uses environment variables for sensitive or environment-specific settings. Create a `.env` file in the project root or export these variables before running the application:
+The application uses environment variables for sensitive or environment-specific settings. Create a `.env` file in the project root (or copy `docker-compose.override.yml.example` to `docker-compose.override.yml` if using Docker Compose) and configure these variables:
 
-* `DATASOURCE_URL`: The JDBC connection URL for MySQL (default: Azure MySQL database URI)
+* `DB_HOST`: The MySQL server hostname (default: `localhost`)
+* `DB_PASSWORD`: The MySQL database password
 * `DATASOURCE_USERNAME`: The MySQL username (default: `demouser`)
-* `DATASOURCE_PASSWORD`: The MySQL password (e.g. `Password~1234`)
 * `KEYCLOAK_CLIENT_SECRET`: Keycloak client secret for OIDC registration
 * `KEYCLOAK_ISSUER_URI`: Keycloak token issuer realm URI
 * `KEYCLOAK_AUTH_SERVER_URL`: Keycloak authentication server endpoint URL
@@ -119,7 +122,7 @@ The application uses environment variables for sensitive or environment-specific
 * `REDIS_HOST`: Redis server hostname (default: `localhost`)
 * `REDIS_PORT`: Redis server port (default: `6379`)
 
-See [.env.example](.env.example) for a complete template.
+See [.env.example](.env.example) and [docker-compose.override.yml.example](docker-compose.override.yml.example) for templates.
 
 ## How to Run
 
@@ -244,7 +247,7 @@ flowchart LR
     RoleMap --> PreAuth["@PreAuthorize"]
     PreAuth --> Endpoint["Controller endpoint"]
     Endpoint --> Audit["Audit log entry"]
-    PreAuth -->|denied| ExHandler["GlobalExceptionHandler → 403 JSON"]
+    PreAuth -->|denied| ExHandler["GlobalExceptionHandler → ApiError (403)"]
 ```
 
 ## Booking Flow
@@ -261,7 +264,7 @@ flowchart LR
 
     Cancel --> StateCheck["Status transition check"]
     StateCheck -->|valid| Cancelled["CANCELLED"]
-    StateCheck -->|invalid| Error["400 Bad Request JSON"]
+    StateCheck -->|invalid| Error["400 ApiError JSON"]
 
     Confirmed --> CacheEvict["Evict room-availability cache"]
     Rejected --> CacheEvict
@@ -294,8 +297,10 @@ flowchart LR
     Bookings --> Audit["Audit trail"]
     Hotels --> Audit
 
-    Security -->|error| ExHandler["GlobalExceptionHandler"]
-    ExHandler --> ErrorJSON["Structured JSON errors"]
+    Hotels -.->|missing ID| CustomEx["HotelNotFoundException / UserNotFoundException"]
+    CustomEx -.-> ExHandler
+    Security -.->|error| ExHandler["GlobalExceptionHandler"]
+    ExHandler --> ErrorJSON["ApiError JSON response"]
 
     CI["GitHub Actions CI"] --> Tests["mvn test on H2"]
 ```
