@@ -1,7 +1,8 @@
 package com.cn.hotelDemo.service;
 
 import java.util.List;
-import java.util.NoSuchElementException;
+
+import com.cn.hotelDemo.exception.HotelNotFoundException;
 
 import org.springframework.stereotype.Service;
 
@@ -24,7 +25,7 @@ public class HotelService {
 
     public Hotel getHotelById(Long id) {
         return hotelRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Hotel not found with ID: " + id));
+                .orElseThrow(() -> new HotelNotFoundException(id));
     }
 
     public Hotel createHotel(HotelRequest hotelRequest) {

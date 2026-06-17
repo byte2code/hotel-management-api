@@ -7,7 +7,7 @@ spring:
         registration:
           keycloak:
             client-id: hotelDemoApplication
-            client-secret: ${KEYCLOAK_CLIENT_SECRET:}
+            client-secret: ${KEYCLOAK_CLIENT_SECRET}
             scope: openid+profile+email
             authorization-grant-type: authorization_code
           google:
@@ -25,8 +25,8 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
   datasource:
-    password: ${DATASOURCE_PASSWORD:}
-    url: ${DATASOURCE_URL:jdbc:mysql://ajaydemosqlserver.mysql.database.azure.com:3306/hotel?sessionVariables=sql_mode='NO_ENGINE_SUBSTITUTION'&jdbcCompliantTruncation=false&DB_CLOSE_ON_EXIT=FALSE}
+    password: ${DB_PASSWORD}
+    url: jdbc:mysql://${DB_HOST:localhost}:3306/hotel?sessionVariables=sql_mode='NO_ENGINE_SUBSTITUTION'&jdbcCompliantTruncation=false&DB_CLOSE_ON_EXIT=FALSE
     username: ${DATASOURCE_USERNAME:demouser}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:

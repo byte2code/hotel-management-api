@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [v9.5.0] - 2026-06-18
+
+### Summary
+Enhanced API error handling with custom exceptions, parameterized database and Keycloak credentials, added WebMvc security test coverage, and provided a docker-compose override example.
+
+### Highlights
+- Created `HotelNotFoundException` and `UserNotFoundException` custom exceptions, updating `HotelService` and `UserService` to throw them on missing IDs.
+- Replaced the controller-based exception handler with a centralized `GlobalExceptionHandler` returning a standardized `ApiError` record (timestamp, status, error, message, path).
+- Parameterized database passwords (`DB_PASSWORD`) and connection URL hosts (`DB_HOST`) in `application.yml` and `.env.example`.
+- Created `docker-compose.override.yml.example` template with placeholder values for all environment variables.
+- Added `HotelSecurityConfigTest` under `WebMvcTest` configuration to verify RBAC access permissions (ADMIN/NORMAL) for `/hotel/getAll`, `/audit/getAll`, and permit-all for `/login`.
+
 ## [v9.4.0] - 2026-06-14
 
 ### Summary

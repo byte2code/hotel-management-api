@@ -2,6 +2,8 @@ package com.cn.hotelDemo.service;
 
 import java.util.List;
 
+import com.cn.hotelDemo.exception.UserNotFoundException;
+
 import org.springframework.stereotype.Service;
 
 import com.cn.hotelDemo.dto.UserRequest;
@@ -21,7 +23,8 @@ public class UserService {
     }
 
     public User getUserById(Long id) {
-        return userRepository.findById(id).get();
+        return userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
     }
 
     public User createUser(UserRequest userRequest) {
