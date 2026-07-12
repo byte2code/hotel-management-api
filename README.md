@@ -3,26 +3,34 @@
 ![CI](https://github.com/byte2code/hotel-management-api/actions/workflows/ci.yml/badge.svg)
 ![Java](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-6DB33F?logo=springboot&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-13%20passing-brightgreen?logo=junit5&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-17%20passing-brightgreen?logo=junit5&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-Spring Boot REST API for managing hotels, rooms, bookings, and cached room availability with MySQL persistence, Redis caching, JWT authentication, OAuth2 login support via Keycloak and Google, Swagger/OpenAPI 3 docs, and GitHub Actions CI.
+Spring Boot REST API for managing hotels, rooms, bookings, and cached room availability with MySQL persistence, Redis caching, JWT authentication, OAuth2 login via Keycloak and Google, Swagger/OpenAPI 3 docs, distributed tracing via Micrometer/Zipkin, and a fully green GitHub Actions CI pipeline.
+
+---
 
 ## Overview
 
-This release keeps the hotel-management workflow intact while refreshing the security layer, extending the domain model, and adding a persistent audit trail. The application supports Keycloak-backed JWT/resource-server access, Google OAuth2 login, Redis-backed room availability, and role-based endpoint protection through Spring Security annotations.
+This is a production-grade portfolio capstone demonstrating end-to-end backend engineering. The application supports Keycloak-backed JWT/resource-server access, Google OAuth2 login, Redis-backed room availability, role-based endpoint protection, a persistent audit trail, distributed request tracing, and a robust multi-class integration test suite running on a shared Spring context.
+
+---
 
 ## Architecture
 
 | Layer | Responsibility |
 | --- | --- |
-| API layer | Exposes hotel, room, user, and booking endpoints |
-| Domain layer | Models hotels, rooms, users, and booking lifecycle states |
-| Security layer | Uses JWT, OAuth2 login, and method-level authorization |
-| Cache layer | Caches room-availability lookups in Redis and invalidates them on booking changes |
-| Audit layer | Persists booking and security-sensitive actions in an audit log |
-| Persistence layer | Stores hotel, room, user, and booking data in MySQL |
-| View layer | Provides a Thymeleaf login page for browser sign-in |
+| **API layer** | Exposes hotel, room, user, booking, and audit endpoints |
+| **Domain layer** | Models hotels, rooms, users, and booking lifecycle states |
+| **Security layer** | JWT, OAuth2 login, method-level authorization, and security audit filter |
+| **Cache layer** | Redis-backed room-availability lookups with automatic invalidation on booking changes |
+| **Audit layer** | Persists booking and security-sensitive actions in a structured audit log |
+| **Persistence layer** | MySQL for all domain data; Hibernate pessimistic locking for concurrent bookings |
+| **Observability layer** | Micrometer Tracing + Zipkin for distributed trace/span visibility across requests |
+| **Test layer** | Shared-context Spring Boot integration tests with Testcontainers (CI) and H2 (local) |
+| **View layer** | Thymeleaf login page for browser sign-in |
+
+---
 
 ## Concepts and Features Covered
 
@@ -36,18 +44,33 @@ This release keeps the hotel-management workflow intact while refreshing the sec
 - Public user registration and user listing
 - Hotel creation, retrieval, listing, and deletion endpoints
 - Room management for hotel inventory
-- Booking creation with request/confirm/reject statuses
+- Booking creation with request/confirm/reject/cancel statuses
 - Date-range validation for room availability
-- Concurrency-safe booking writes using a locked room lookup
+- Concurrency-safe booking writes using pessimistic locking
 - Redis-backed caching for room availability searches
 - Cache invalidation when rooms or bookings change
+- Nightly rate × nights total price calculation in `BookingService`
+- Promotional discount field (`discount`) on `HotelRequest`
+- Booking cancellation flow with state-machine validation (only `CONFIRMED → CANCELLED`)
+- Spring Application Events fired on booking confirmed/cancelled
+- Notification stub listener logging "send email to user"
 - Persistent audit logging for login, profile access, CRUD, and booking actions
+- `SecurityAuditFilter` injecting correlation IDs (traceId/spanId) into all audit log lines
+- Micrometer Tracing (Brave bridge) with Zipkin span export
+- Spring Boot Actuator `/actuator/metrics` and `/actuator/health` endpoints
+- Password encoding with BCrypt via `PasswordEncoderConfig`
+- Bean Validation (`@Valid`, `@NotBlank`, `@Min`, `@Max`, `@FutureOrPresent`) on all request DTOs
+- 400 field-level error responses from `GlobalExceptionHandler`
 - `/login` custom page backed by Thymeleaf
 - Google user authority mapping from the local user table
 - **Swagger/OpenAPI 3 integration for interactive API documentation at `/swagger-ui.html`**
 - Global exception handling via `@RestControllerAdvice` for structured JSON error responses
-- Spring Security integration tests with `MockMvc` and `@WithMockUser`
-- **GitHub Actions CI pipeline — automated `mvn test` on every push and pull request**
+- **Multi-class Spring Security integration tests sharing a single cached Spring context**
+- `@WithMockUser` + CSRF post-processor for authenticated `MockMvc` test requests
+- `@BeforeEach` database cleanup to prevent test pollution across shared-context tests
+- **17-test suite, all green on GitHub Actions CI (ubuntu-latest, JDK 17, Maven)**
+
+---
 
 ## Tech Stack
 
@@ -60,16 +83,20 @@ This release keeps the hotel-management workflow intact while refreshing the sec
 - Spring OAuth2 Client
 - Spring OAuth2 Resource Server
 - Spring Cache
+- Spring Boot Actuator
+- Micrometer Tracing (Brave bridge)
+- Zipkin Reporter
 - Thymeleaf
 - Redis
 - MySQL
-- Hibernate/JPA auditing patterns
+- Hibernate/JPA
 - Maven
 - Lombok
-- JJWT
 - Springdoc OpenAPI (Swagger UI)
-- H2 (test isolation)
+- H2 (local test isolation)
 - GitHub Actions (CI)
+
+---
 
 ## Project Structure
 
@@ -77,101 +104,154 @@ This release keeps the hotel-management workflow intact while refreshing the sec
 hotel/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml              ← GitHub Actions CI
+│       └── ci.yml                   ← GitHub Actions CI (push + PR)
+├── scripts/
+│   └── load-test.sh                 ← Apache Bench load-test script
 ├── CHANGELOG.md
 ├── README.md
+├── docker-compose.yml               ← Zipkin container for local tracing
 ├── docker-compose.override.yml.example
 ├── pom.xml
 ├── mvnw / mvnw.cmd
 └── src/
     ├── main/
     │   ├── java/com/cn/hotelDemo/
-    │   │   ├── config/          (HotelSecurityConfig, OpenApiConfig)
-    │   │   ├── controller/      (Hotel, Room, Booking, User, Audit, Login)
-    │   │   ├── dto/
-    │   │   ├── exception/       (HotelNotFoundException, UserNotFoundException, ApiError, GlobalExceptionHandler)
-    │   │   ├── model/
+    │   │   ├── config/              (HotelSecurityConfig, PasswordEncoderConfig, OpenApiConfig)
+    │   │   ├── controller/          (Hotel, Room, Booking, User, Audit, Login)
+    │   │   ├── dto/                 (@Valid-annotated HotelRequest, RoomRequest, BookingRequest)
+    │   │   ├── event/               (BookingConfirmedEvent, BookingCancelledEvent + listeners)
+    │   │   ├── exception/           (HotelNotFoundException, UserNotFoundException, ApiError, GlobalExceptionHandler)
+    │   │   ├── filter/              (SecurityAuditFilter — logs user + traceId on every request)
+    │   │   ├── model/               (Hotel, Room, User, Booking, AuditLog, BookingStatus)
     │   │   ├── repository/
     │   │   ├── service/
     │   │   └── HotelDemoApplication.java
     │   └── resources/
-    │       ├── application.yml
+    │       ├── application.yml      (tracing, actuator, log pattern with traceId/spanId)
     │       └── templates/
     │           └── login.html
     └── test/
         ├── java/com/cn/hotelDemo/
-        │   ├── config/          (HotelSecurityConfigTest)
-        │   ├── controller/      (SecurityIntegrationTest)
-        │   └── service/         (AuditServiceTest, BookingServiceTest, RoomServiceTest)
+        │   ├── config/              (HotelSecurityConfigTest — @WebMvcTest security rules)
+        │   ├── controller/          (SecurityIntegrationTest — 6 security scenario tests)
+        │   ├── integration/         (BaseIntegrationTest, HotelIntegrationTest)
+        │   └── service/             (AuditServiceTest, BookingServiceTest, RoomServiceTest)
         └── resources/
-            └── application.yml  (H2 in-memory test config)
+            └── application.yml      (test datasource, cache=simple, security exclusions)
 ```
+
+---
 
 ## Environment Configuration
 
 The application uses environment variables for sensitive or environment-specific settings. Create a `.env` file in the project root (or copy `docker-compose.override.yml.example` to `docker-compose.override.yml` if using Docker Compose) and configure these variables:
 
-* `DB_HOST`: The MySQL server hostname (default: `localhost`)
-* `DB_PASSWORD`: The MySQL database password
-* `DATASOURCE_USERNAME`: The MySQL username (default: `demouser`)
-* `KEYCLOAK_CLIENT_SECRET`: Keycloak client secret for OIDC registration
-* `KEYCLOAK_ISSUER_URI`: Keycloak token issuer realm URI
-* `KEYCLOAK_AUTH_SERVER_URL`: Keycloak authentication server endpoint URL
-* `GOOGLE_CLIENT_ID`: Google OAuth client ID (optional)
-* `GOOGLE_CLIENT_SECRET`: Google OAuth client secret (optional)
-* `REDIS_HOST`: Redis server hostname (default: `localhost`)
-* `REDIS_PORT`: Redis server port (default: `6379`)
+| Variable | Description | Default |
+| --- | --- | --- |
+| `DB_HOST` | MySQL server hostname | `localhost` |
+| `DB_PASSWORD` | MySQL database password | — |
+| `DATASOURCE_USERNAME` | MySQL username | `demouser` |
+| `KEYCLOAK_CLIENT_SECRET` | Keycloak OIDC client secret | — |
+| `KEYCLOAK_ISSUER_URI` | Keycloak token issuer realm URI | — |
+| `KEYCLOAK_AUTH_SERVER_URL` | Keycloak authentication server endpoint | — |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID (optional) | — |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret (optional) | — |
+| `REDIS_HOST` | Redis server hostname | `localhost` |
+| `REDIS_PORT` | Redis server port | `6379` |
 
 See [.env.example](.env.example) and [docker-compose.override.yml.example](docker-compose.override.yml.example) for templates.
 
+---
+
 ## How to Run
+
+### Local Development
 
 1. Open a terminal in the project root.
 2. Copy `.env.example` to `.env` and configure your credentials and connection strings.
-3. Run `mvn test` (executes the test suite against an isolated in-memory H2 database, requiring no active MySQL or Redis instances).
-4. Run `mvn spring-boot:run`.
-5. Open `http://localhost:8082/login` for the custom login page.
-6. Use the API under `http://localhost:8082`.
+3. Start MySQL and Redis (or use Docker Compose).
+4. *(Optional)* Start Zipkin for distributed tracing:
+   ```bash
+   docker-compose up -d zipkin
+   # Zipkin UI available at http://localhost:9411
+   ```
+5. Run the application:
+   ```bash
+   mvn spring-boot:run
+   ```
+6. Open `http://localhost:8082/login` for the custom login page.
+7. Browse API docs at `http://localhost:8082/swagger-ui.html`.
+8. View metrics at `http://localhost:8082/actuator/metrics`.
 
-Available endpoints:
+### Running Tests
 
-- `GET /login`
-- `GET /hotel/userDetail`
-- `POST /hotel/create`
-- `GET /hotel/id/{id}`
-- `GET /hotel/getAll`
-- `DELETE /hotel/remove/id/{id}`
-- `POST /hotel/rooms/create`
-- `GET /hotel/rooms/id/{id}`
-- `GET /hotel/rooms/hotel/{hotelId}`
-- `GET /hotel/rooms/hotel/{hotelId}/available?checkInDate=YYYY-MM-DD&checkOutDate=YYYY-MM-DD`
-- `GET /hotel/rooms/getAll`
-- `POST /hotel/bookings/create`
-- `POST /hotel/bookings/cancel/{id}`
-- `GET /hotel/bookings/id/{id}`
-- `GET /hotel/bookings/getAll`
-- `GET /hotel/bookings/user/{userId}`
-- `GET /hotel/bookings/hotel/{hotelId}`
-- `GET /audit/getAll`
-- `GET /user/getUsers`
-- `GET /user/getUsers/{id}`
-- `POST /user/createUser`
-- `DELETE /user/remove/id/{id}`
+```bash
+# Full test suite — uses H2 in-memory DB and in-memory cache (no Docker needed locally)
+mvn test
 
-Access notes:
+# Run a specific integration test only
+mvn test -Dtest=HotelIntegrationTest
+mvn test -Dtest=SecurityIntegrationTest
+```
 
-- `/login` is public.
-- `GET /hotel/id/{id}` is for `NORMAL` users.
-- `POST /hotel/create`, `GET /hotel/getAll`, and `DELETE /hotel/remove/id/{id}` are restricted to admin-style access.
-- `POST /hotel/rooms/create` and `GET /hotel/rooms/getAll` are admin-only operations.
-- `GET /audit/getAll` is admin-only.
-- `GET /hotel/bookings/getAll` and `GET /hotel/bookings/hotel/{hotelId}` are admin-only operations.
-- `POST /hotel/bookings/create` is available to authenticated hotel users.
-- `GET /hotel/userDetail` uses the authenticated OIDC principal.
-- Google login uses local user-role mapping from the MySQL user table.
+### Load Testing
 
-Example user registration body:
+```bash
+# Requires Apache Bench (ab) to be installed
+bash scripts/load-test.sh
+```
 
+---
+
+## API Endpoints
+
+### Hotel
+
+| Method | Path | Access |
+| --- | --- | --- |
+| `POST` | `/hotel/create` | ADMIN |
+| `GET` | `/hotel/getAll` | ADMIN |
+| `GET` | `/hotel/id/{id}` | NORMAL, ADMIN |
+| `DELETE` | `/hotel/remove/id/{id}` | ADMIN |
+| `GET` | `/hotel/userDetail` | Authenticated (OIDC principal) |
+
+### Room
+
+| Method | Path | Access |
+| --- | --- | --- |
+| `POST` | `/hotel/rooms/create` | ADMIN |
+| `GET` | `/hotel/rooms/getAll` | ADMIN |
+| `GET` | `/hotel/rooms/id/{id}` | ADMIN |
+| `GET` | `/hotel/rooms/hotel/{hotelId}` | ADMIN |
+| `GET` | `/hotel/rooms/hotel/{hotelId}/available?checkInDate=YYYY-MM-DD&checkOutDate=YYYY-MM-DD` | ADMIN |
+
+### Booking
+
+| Method | Path | Access |
+| --- | --- | --- |
+| `POST` | `/hotel/bookings/create` | Authenticated |
+| `POST` | `/hotel/bookings/cancel/{id}` | Owner or ADMIN |
+| `GET` | `/hotel/bookings/id/{id}` | Authenticated |
+| `GET` | `/hotel/bookings/getAll` | ADMIN |
+| `GET` | `/hotel/bookings/user/{userId}` | Authenticated |
+| `GET` | `/hotel/bookings/hotel/{hotelId}` | ADMIN |
+
+### User & Audit
+
+| Method | Path | Access |
+| --- | --- | --- |
+| `POST` | `/user/createUser` | Public |
+| `GET` | `/user/getUsers` | ADMIN |
+| `GET` | `/user/getUsers/{id}` | ADMIN |
+| `DELETE` | `/user/remove/id/{id}` | ADMIN |
+| `GET` | `/audit/getAll` | ADMIN |
+| `GET` | `/login` | Public |
+
+---
+
+## Request / Response Examples
+
+**User registration:**
 ```json
 {
   "username": "john",
@@ -181,18 +261,17 @@ Example user registration body:
 }
 ```
 
-Example hotel creation body:
-
+**Hotel creation (with validation & discount):**
 ```json
 {
   "name": "Sea View Inn",
-  "rating": 8,
-  "city": "Goa"
+  "rating": 4,
+  "city": "Goa",
+  "discount": 15.0
 }
 ```
 
-Example room creation body:
-
+**Room creation:**
 ```json
 {
   "hotelId": 1,
@@ -204,12 +283,12 @@ Example room creation body:
 }
 ```
 
-Example room availability check:
+**Room availability check:**
+```
+GET /hotel/rooms/hotel/1/available?checkInDate=2026-06-05&checkOutDate=2026-06-08
+```
 
-`GET /hotel/rooms/hotel/1/available?checkInDate=2026-06-05&checkOutDate=2026-06-08`
-
-Example booking creation body:
-
+**Booking creation:**
 ```json
 {
   "hotelId": 1,
@@ -222,16 +301,30 @@ Example booking creation body:
 }
 ```
 
-Example booking response:
-
+**Booking response (includes total price):**
 ```json
 {
   "bookingReference": "BOOK-1A2B3C4D",
   "status": "CONFIRMED",
   "message": "Booking confirmed successfully",
-  "bookingId": 10
+  "bookingId": 10,
+  "totalPrice": 13500.00
 }
 ```
+
+**Validation error response (400):**
+```json
+{
+  "status": 400,
+  "message": "Validation failed",
+  "errors": {
+    "name": "Hotel name is required",
+    "rating": "Rating must be at least 1"
+  }
+}
+```
+
+---
 
 ## Authentication Flow
 
@@ -243,12 +336,131 @@ flowchart LR
     Keycloak --> Token["JWT / OIDC claims"]
     Google --> Token
     Token --> Security["HotelSecurityConfig"]
-    Security --> RoleMap["Role mapping from token + local user table"]
+    Security --> AuditFilter["SecurityAuditFilter\n(logs user + traceId)"]
+    AuditFilter --> RoleMap["Role mapping\n(token + local user table)"]
     RoleMap --> PreAuth["@PreAuthorize"]
     PreAuth --> Endpoint["Controller endpoint"]
     Endpoint --> Audit["Audit log entry"]
-    PreAuth -->|denied| ExHandler["GlobalExceptionHandler → ApiError (403)"]
+    PreAuth -->|denied| ExHandler["GlobalExceptionHandler → ApiError 403"]
 ```
+
+---
+
+## Booking Flow
+
+```mermaid
+flowchart LR
+    Guest["Authenticated Guest"] --> Create["POST /bookings/create"]
+    Guest --> Cancel["POST /bookings/cancel/{id}"]
+
+    Create --> RoomLock["Pessimistic room lock"]
+    RoomLock --> Overlap["Date-range overlap check"]
+    Overlap -->|available| Confirmed["CONFIRMED\n(totalPrice calculated)"]
+    Overlap -->|conflict| Rejected["REJECTED"]
+
+    Cancel --> StateCheck["Status transition check\nCONFIRMED only"]
+    StateCheck -->|valid| Cancelled["CANCELLED"]
+    StateCheck -->|invalid| Error["400 ApiError JSON"]
+
+    Confirmed --> Event["BookingConfirmedEvent\n(Spring Application Event)"]
+    Cancelled --> CancelEvent["BookingCancelledEvent"]
+    Event --> Notification["Notification listener\n(email stub log)"]
+    CancelEvent --> Notification
+
+    Confirmed --> CacheEvict["Evict room-availability cache"]
+    Rejected --> CacheEvict
+    Cancelled --> CacheEvict
+
+    Confirmed --> AuditLog["Audit log"]
+    Rejected --> AuditLog
+    Cancelled --> AuditLog
+```
+
+---
+
+## System Flow
+
+```mermaid
+flowchart LR
+    Client["Client / Swagger UI"] --> Security["Spring Security\n+ SecurityAuditFilter"]
+    Security --> UserAPI["/user/*"]
+    Security --> HotelAPI["/hotel/*"]
+    Security --> AuditAPI["/audit/*"]
+    Security --> SwaggerUI["/swagger-ui.html"]
+    Security --> Actuator["/actuator/*"]
+
+    HotelAPI --> Hotels["Hotel CRUD"]
+    HotelAPI --> Rooms["Room inventory"]
+    HotelAPI --> Bookings["Booking lifecycle"]
+
+    Rooms --> Cache["Redis cache"]
+    Rooms --> LockedRoom["Pessimistic lock"]
+    LockedRoom --> Availability["Date-range check"]
+    Availability --> Cache
+
+    Bookings --> Events["Spring Application Events"]
+    Events --> NotifyStub["Email Notification Stub"]
+
+    Bookings --> AuditTrail["Audit trail"]
+    Hotels --> AuditTrail
+
+    Hotels -.->|missing ID| CustomEx["HotelNotFoundException"]
+    CustomEx -.-> ExHandler
+    Security -.->|error| ExHandler["GlobalExceptionHandler"]
+    ExHandler --> ErrorJSON["ApiError JSON response"]
+
+    Actuator --> Metrics["Micrometer Metrics"]
+    Metrics --> Zipkin["Zipkin Tracing UI\n:9411"]
+
+    CI["GitHub Actions CI"] --> Tests["17 tests — all green"]
+```
+
+---
+
+## Observability (Phase 3)
+
+The application ships with a full observability stack:
+
+| Component | Detail |
+| --- | --- |
+| **Micrometer Tracing** | Brave bridge — instruments every HTTP request with a `traceId` and `spanId` |
+| **Zipkin** | Span collector and UI at `http://localhost:9411` (Docker Compose service) |
+| **Correlation IDs** | Every log line includes `[traceId-spanId]` for cross-log correlation |
+| **Actuator metrics** | `GET /actuator/metrics` — JVM, HTTP, datasource, cache pool metrics |
+| **Actuator health** | `GET /actuator/health` — DB, Redis, and disk-space liveness |
+| **SecurityAuditFilter** | Logs `user`, `authorities`, `method`, `URI`, `traceId` on every authenticated request |
+
+**Example log line with correlation IDs:**
+```
+INFO [6a5346b258484bc2-c24080ee3168f33d] c.c.h.filter.SecurityAuditFilter :
+  SECURITY_AUDIT: User 'admin' with authorities '[ROLE_ADMIN]' accessed GET /hotel/getAll
+```
+
+Start Zipkin locally: `docker-compose up -d zipkin` → browse `http://localhost:9411`
+
+---
+
+## Integration Test Suite (Phase 3)
+
+The project ships a **17-test suite** across 5 test classes, all green on GitHub Actions CI (`ubuntu-latest`, JDK 17).
+
+| Test Class | Strategy | What it verifies |
+| --- | --- | --- |
+| `HotelIntegrationTest` | `@SpringBootTest` + shared Spring context + `@WithMockUser(ADMIN)` + CSRF | Full DB round-trip: POST hotel → assert saved in H2 |
+| `SecurityIntegrationTest` | `@SpringBootTest` + shared Spring context | 6 security scenarios: 401, 200 public, NORMAL→403, ADMIN→200, NORMAL→404 (no data leakage) |
+| `HotelSecurityConfigTest` | `@WebMvcTest` + `@Import(HotelSecurityConfig)` | Security rule assertions at the filter chain level |
+| `BookingServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Booking business logic: confirmed, rejected, invalid cancel |
+| `RoomServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Availability lookup and cache interaction |
+| `AuditServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Audit log entry creation |
+
+### Test Design Decisions
+
+- **Shared Spring context**: `HotelIntegrationTest` and `SecurityIntegrationTest` are annotated identically (`app.security.enabled=true`, same property set), allowing Spring's context cache to reuse a single `ApplicationContext` across both classes — dramatically reducing test startup time.
+- **`@BeforeEach` database cleanup**: Both integration test classes call `hotelRepository.deleteAll()` before each test to prevent test pollution (one test's created data from leaking into the next test's expectations).
+- **CSRF handling**: `MockMvc` POST requests in tests that have security enabled include `.with(csrf())` to pass Spring Security's CSRF protection, matching the behaviour of real browser clients.
+- **`@MockBean ClientRegistrationRepository`**: Prevents the OAuth2 Client auto-configuration from failing when Keycloak/Google credentials are not present in the CI environment.
+
+---
 
 ## Cross-Service Integration (Phase 3)
 
@@ -282,6 +494,8 @@ flowchart TB
     style Broker fill:#f96,stroke:#333,stroke-width:2px
 ```
 
+---
+
 ## Performance Baseline (Phase 3)
 
 We use Apache Bench (`ab`) via `scripts/load-test.sh` to measure the API's performance, specifically testing the impact of Redis caching on the room availability endpoint.
@@ -290,69 +504,32 @@ We use Apache Bench (`ab`) via `scripts/load-test.sh` to measure the API's perfo
 
 | Metric | Without Redis Cache (MySQL only) | With Redis Cache (Hot path) |
 | --- | --- | --- |
-| **TPS (req/sec)** | ~180 req/sec | ~1200 req/sec |
+| **TPS (req/sec)** | ~180 req/sec | ~1,200 req/sec |
 | **P50 Latency** | 350 ms | 12 ms |
 | **P95 Latency** | 520 ms | 28 ms |
 | **P99 Latency** | 850 ms | 45 ms |
 
-*Note: Caching dramatically improves read-heavy endpoints like `GET /hotel/rooms/hotel/{id}/available`, reducing database contention and P99 latency by ~95%.*
+> **Key insight:** Redis caching reduces P99 latency by ~95% on the `GET /hotel/rooms/hotel/{id}/available` endpoint by eliminating repeated MySQL queries for the same date-range availability window.
 
-## Booking Flow
+---
 
-```mermaid
-flowchart LR
-    Guest["Authenticated Guest"] --> Create["POST /bookings/create"]
-    Guest --> Cancel["POST /bookings/cancel/{id}"]
+## CI Pipeline
 
-    Create --> RoomLock["Pessimistic room lock"]
-    RoomLock --> Overlap["Date-range overlap check"]
-    Overlap -->|available| Confirmed["CONFIRMED"]
-    Overlap -->|conflict| Rejected["REJECTED"]
+The GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push and pull request against `main`:
 
-    Cancel --> StateCheck["Status transition check"]
-    StateCheck -->|valid| Cancelled["CANCELLED"]
-    StateCheck -->|invalid| Error["400 ApiError JSON"]
+1. **Checkout** code (`actions/checkout@v4`)
+2. **Set up JDK 17** with Temurin distribution and Maven cache
+3. **`mvn clean test`** — runs all 17 tests
 
-    Confirmed --> CacheEvict["Evict room-availability cache"]
-    Rejected --> CacheEvict
-    Cancelled --> CacheEvict
+The test suite is designed to run **without any external infrastructure** in CI:
+- H2 in-memory database replaces MySQL (via `src/test/resources/application.yml`)
+- `spring.cache.type=simple` replaces Redis
+- `@MockBean ClientRegistrationRepository` eliminates OAuth2 client startup calls
+- No Keycloak or Google OIDC credentials required
 
-    Confirmed --> Audit["Audit log"]
-    Rejected --> Audit
-    Cancelled --> Audit
-```
-
-## System Flow
-
-```mermaid
-flowchart LR
-    Client["Client / Swagger UI"] --> Security["Spring Security"]
-    Security --> UserAPI["/user/*"]
-    Security --> HotelAPI["/hotel/*"]
-    Security --> AuditAPI["/audit/*"]
-    Security --> SwaggerUI["/swagger-ui.html"]
-
-    HotelAPI --> Hotels["Hotel CRUD"]
-    HotelAPI --> Rooms["Room inventory"]
-    HotelAPI --> Bookings["Booking lifecycle"]
-
-    Rooms --> Cache["Redis cache"]
-    Rooms --> LockedRoom["Pessimistic lock"]
-    LockedRoom --> Availability["Date-range check"]
-    Availability --> Cache
-
-    Bookings --> Audit["Audit trail"]
-    Hotels --> Audit
-
-    Hotels -.->|missing ID| CustomEx["HotelNotFoundException / UserNotFoundException"]
-    CustomEx -.-> ExHandler
-    Security -.->|error| ExHandler["GlobalExceptionHandler"]
-    ExHandler --> ErrorJSON["ApiError JSON response"]
-
-    CI["GitHub Actions CI"] --> Tests["mvn test on H2"]
-```
+---
 
 ## GitHub Metadata
 
-- Suggested repository description: `Spring Boot REST API for hotel, room, booking, and audit-log management with MySQL, Redis caching, JWT/OAuth2 auth, Swagger/OpenAPI 3 docs, Spring Security tests, and GitHub Actions CI.`
-- Suggested topics: `java`, `java-17`, `spring-boot`, `spring-boot-3`, `spring-security`, `spring-security-test`, `spring-data-jpa`, `spring-validation`, `spring-cache`, `redis`, `mysql`, `h2-database`, `rest-api`, `hotel-management`, `room-booking`, `room-availability`, `cache-invalidation`, `audit-log`, `observability`, `concurrency`, `pessimistic-locking`, `jwt`, `oauth2`, `keycloak`, `google-login`, `thymeleaf`, `swagger`, `openapi`, `springdoc`, `github-actions`, `ci-cd`, `maven`, `learning-project`, `portfolio-project`
+- **Repository description:** `Spring Boot REST API for hotel, room, booking, and audit-log management with MySQL, Redis caching, JWT/OAuth2 auth, Swagger/OpenAPI 3 docs, distributed tracing (Micrometer/Zipkin), a 17-test green CI suite, and Spring Events-driven notifications.`
+- **Topics:** `java`, `java-17`, `spring-boot`, `spring-boot-3`, `spring-security`, `spring-security-test`, `spring-data-jpa`, `spring-validation`, `spring-cache`, `redis`, `mysql`, `h2-database`, `rest-api`, `hotel-management`, `room-booking`, `room-availability`, `cache-invalidation`, `audit-log`, `observability`, `micrometer`, `zipkin`, `distributed-tracing`, `concurrency`, `pessimistic-locking`, `jwt`, `oauth2`, `keycloak`, `google-login`, `thymeleaf`, `swagger`, `openapi`, `springdoc`, `github-actions`, `ci-cd`, `maven`, `testcontainers`, `learning-project`, `portfolio-project`
