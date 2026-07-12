@@ -24,9 +24,11 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtDecoders;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.cn.hotelDemo.filter.SecurityAuditFilter;
 import com.cn.hotelDemo.model.User;
 import com.cn.hotelDemo.repository.UserRepository;
 import com.nimbusds.jose.shaded.gson.internal.LinkedTreeMap;
@@ -40,9 +42,11 @@ public class HotelSecurityConfig {
 
 	public final String GOOGLE_ISSUER_URI = "accounts.google.com";
 	private UserRepository userRepository;
+	private SecurityAuditFilter securityAuditFilter;
 
-	public HotelSecurityConfig(UserRepository userRepository){
+	public HotelSecurityConfig(UserRepository userRepository, SecurityAuditFilter securityAuditFilter){
 		this.userRepository = userRepository;
+		this.securityAuditFilter = securityAuditFilter;
 	}
 
 	@Bean
@@ -64,6 +68,8 @@ public class HotelSecurityConfig {
 							.jwtAuthenticationConverter(jwtAuthenticationConverter())
 							)
 					);
+		
+		http.addFilterAfter(securityAuditFilter, UsernamePasswordAuthenticationFilter.class);
 		return http.build();
 	}
 	
