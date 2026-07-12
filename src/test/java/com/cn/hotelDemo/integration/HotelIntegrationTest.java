@@ -12,6 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -20,14 +21,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
-@AutoConfigureMockMvc(addFilters = false)
+@AutoConfigureMockMvc
 @TestPropertySource(properties = {
-    "app.security.enabled=false",
-    "spring.autoconfigure.exclude=" +
-        "org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration," +
-        "org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration," +
-        "org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration," +
-        "org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration"
+    "app.security.enabled=true",
+    "spring.autoconfigure.exclude=",
+    "app.security.jwt-issuer-uri=https://accounts.google.com"
 })
 class HotelIntegrationTest extends BaseIntegrationTest {
 
@@ -49,10 +47,12 @@ class HotelIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMIN")
     void shouldCreateHotelSuccessfully() throws Exception {
         HotelRequest request = new HotelRequest("Grand Plaza", 5L, "New York", 10.0);
 
         mockMvc.perform(post("/hotel/create")
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
