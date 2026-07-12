@@ -93,8 +93,8 @@ public class BookingService {
 		Booking booking = bookingRepository.findById(id)
 				.orElseThrow(() -> new IllegalArgumentException("Booking not found with ID: " + id));
 
-		if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.REJECTED) {
-			throw new IllegalArgumentException("Booking cannot be cancelled because it is already " + booking.getStatus());
+		if (booking.getStatus() != BookingStatus.CONFIRMED) {
+			throw new IllegalArgumentException("Only CONFIRMED bookings can be cancelled.");
 		}
 
 		booking.getStatus(); // Optional logging

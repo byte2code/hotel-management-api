@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.AccessDeniedException;
 
 import com.cn.hotelDemo.dto.BookingRequest;
 import com.cn.hotelDemo.dto.BookingResponse;
@@ -87,6 +88,19 @@ public class BookingController {
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
 	@Operation(summary = "Cancel a booking by its ID")
 	public ResponseEntity<BookingResponse> cancelBooking(@PathVariable Long id, Authentication authentication) {
+		Booking booking = bookingService.getBookingById(id);
+		if (booking == null) {
+			return ResponseEntity.notFound().build();
+		}
+		
+		boolean isAdmin = authentication.getAuthorities().stream()
+				.anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("admin"));
+		
+		if (!isAdmin && !booking.getUser().getUsername().equals(authentication.getName())
+				&& !booking.getUser().getEmail().equals(authentication.getName())) {
+			throw new AccessDeniedException("Only the booking owner or an admin can cancel this booking.");
+		}
+
 		BookingResponse response = bookingService.cancelBooking(id);
 		auditService.record("BOOKING_CANCELLED", authentication.getName(), "BOOKING",
 				String.valueOf(response.getBookingId()), response.getStatus().name(), response.getMessage());
