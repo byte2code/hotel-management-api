@@ -33,6 +33,9 @@ public class HotelService {
     	hotel.setCity(hotelRequest.getCity());
     	hotel.setName(hotelRequest.getName());
     	hotel.setRating(hotelRequest.getRating());
+    	if (hotelRequest.getDiscount() != null) {
+    		hotel.setDiscount(hotelRequest.getDiscount());
+    	}
     	
        return hotelRepository.save(hotel);
     }

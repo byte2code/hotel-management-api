@@ -1,5 +1,6 @@
 package com.cn.hotelDemo.dto;
 
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -21,5 +22,9 @@ public class HotelRequest {
 
 	@NotBlank(message = "City is required")
 	private String city;
+
+	@Min(0)
+	@Max(100)
+	private Double discount = 0.0;
 	
 }

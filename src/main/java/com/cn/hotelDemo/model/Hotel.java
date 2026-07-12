@@ -21,6 +21,7 @@ public class Hotel {
 	private String name;
 	private Long rating;
 	private String city;
+	private Double discount = 0.0;
 
 	@OneToMany(mappedBy = "hotel")
 	@JsonIgnoreProperties({"hotel", "bookings"})
@@ -52,6 +53,12 @@ public class Hotel {
 	}
 	public void setCity(String city) {
 		this.city = city;
+	}
+	public Double getDiscount() {
+		return discount;
+	}
+	public void setDiscount(Double discount) {
+		this.discount = discount;
 	}
 
 	public List<Room> getRooms() {

@@ -1,5 +1,6 @@
 package com.cn.hotelDemo.dto;
 
+import java.math.BigDecimal;
 import com.cn.hotelDemo.model.BookingStatus;
 
 import lombok.AllArgsConstructor;
@@ -15,4 +16,5 @@ public class BookingResponse {
 	private BookingStatus status;
 	private String message;
 	private Long bookingId;
+	private BigDecimal totalPrice;
 }

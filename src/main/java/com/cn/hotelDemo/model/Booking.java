@@ -14,6 +14,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "booking")
@@ -30,6 +31,7 @@ public class Booking {
 	private LocalDate checkOutDate;
 	private Integer guestCount;
 	private String specialRequests;
+	private BigDecimal totalPrice;
 
 	@Enumerated(EnumType.STRING)
 	private BookingStatus status = BookingStatus.REQUESTED;
@@ -95,6 +97,14 @@ public class Booking {
 
 	public void setSpecialRequests(String specialRequests) {
 		this.specialRequests = specialRequests;
+	}
+
+	public BigDecimal getTotalPrice() {
+		return totalPrice;
+	}
+
+	public void setTotalPrice(BigDecimal totalPrice) {
+		this.totalPrice = totalPrice;
 	}
 
 	public BookingStatus getStatus() {

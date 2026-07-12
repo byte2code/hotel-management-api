@@ -1,6 +1,9 @@
 package com.cn.hotelDemo.service;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
 
@@ -102,7 +105,7 @@ public class BookingService {
 		bookingRepository.save(booking);
 
 		return new BookingResponse(booking.getBookingReference(), booking.getStatus(),
-				"Booking cancelled successfully", booking.getId());
+				"Booking cancelled successfully", booking.getId(), booking.getTotalPrice());
 	}
 
 	private BookingResponse persistBooking(BookingRequest bookingRequest, User user, Room room, Hotel hotel,
@@ -117,10 +120,21 @@ public class BookingService {
 		booking.setGuestCount(bookingRequest.getGuestCount());
 		booking.setSpecialRequests(bookingRequest.getSpecialRequests());
 		booking.setStatus(status);
+		
+		if (status == BookingStatus.CONFIRMED && room.getNightlyRate() != null) {
+			long nights = ChronoUnit.DAYS.between(bookingRequest.getCheckInDate(), bookingRequest.getCheckOutDate());
+			if (nights <= 0) nights = 1;
+			BigDecimal basePrice = room.getNightlyRate().multiply(BigDecimal.valueOf(nights));
+			if (hotel.getDiscount() != null && hotel.getDiscount() > 0) {
+				BigDecimal discountFactor = BigDecimal.valueOf(100 - hotel.getDiscount()).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+				basePrice = basePrice.multiply(discountFactor);
+			}
+			booking.setTotalPrice(basePrice.setScale(2, RoundingMode.HALF_UP));
+		}
 
 		Booking savedBooking = bookingRepository.save(booking);
 		return new BookingResponse(savedBooking.getBookingReference(), savedBooking.getStatus(), message,
-				savedBooking.getId());
+				savedBooking.getId(), savedBooking.getTotalPrice());
 	}
 
 	private boolean overlaps(LocalDate firstStart, LocalDate firstEnd, LocalDate secondStart, LocalDate secondEnd) {
