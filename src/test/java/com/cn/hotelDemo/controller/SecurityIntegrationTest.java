@@ -27,8 +27,16 @@ public class SecurityIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private com.cn.hotelDemo.repository.HotelRepository hotelRepository;
+
     @MockBean
     private ClientRegistrationRepository clientRegistrationRepository;
+
+    @org.junit.jupiter.api.BeforeEach
+    public void cleanDb() {
+        hotelRepository.deleteAll();
+    }
 
     @Test
     public void unauthenticatedAccess_shouldReturnUnauthorized() throws Exception {
