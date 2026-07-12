@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+
 import com.cn.hotelDemo.dto.UserRequest;
 import com.cn.hotelDemo.model.User;
 import com.cn.hotelDemo.service.AuditService;
@@ -45,9 +47,9 @@ public class UserController {
         return userService.getUserById(id);
     }
 
-    @PostMapping("/createUser")
+	@PostMapping("/createUser")
     @Operation(summary = "Register a new user (Public)")
-	public void createUser(@RequestBody UserRequest userRequest)
+	public void createUser(@Valid @RequestBody UserRequest userRequest)
 	{
 		User createdUser = userService.createUser(userRequest);
 		auditService.record("USER_CREATED", userRequest.getUsername(), "USER", String.valueOf(createdUser.getId()),

@@ -5,6 +5,7 @@ import java.util.List;
 import com.cn.hotelDemo.exception.UserNotFoundException;
 
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.cn.hotelDemo.dto.UserRequest;
 import com.cn.hotelDemo.model.User;
@@ -13,9 +14,11 @@ import com.cn.hotelDemo.repository.UserRepository;
 @Service
 public class UserService {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public List<User> getUsers() {
@@ -30,7 +33,7 @@ public class UserService {
     public User createUser(UserRequest userRequest) {
         User user = new User();
         user.setUsername(userRequest.getUsername());
-        user.setPassword(userRequest.getPassword());
+        user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
         user.setRole(userRequest.getRole());
         user.setEmail(userRequest.getEmail());
         

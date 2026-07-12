@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+
 import com.cn.hotelDemo.dto.HotelRequest;
 import com.cn.hotelDemo.model.Hotel;
 import com.cn.hotelDemo.service.HotelService;
@@ -48,7 +50,7 @@ public class HotelController {
 	@PostMapping("/create")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
 	@Operation(summary = "Create a new hotel (Admin only)")
-	public void createHotel(@RequestBody HotelRequest hotelRequest, Authentication authentication)
+	public void createHotel(@Valid @RequestBody HotelRequest hotelRequest, Authentication authentication)
 	{
 		Hotel createdHotel = hotelService.createHotel(hotelRequest);
 		auditService.record("HOTEL_CREATED", authentication.getName(), "HOTEL", String.valueOf(createdHotel.getId()),
