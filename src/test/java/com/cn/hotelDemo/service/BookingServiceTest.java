@@ -45,11 +45,14 @@ class BookingServiceTest {
 	@Mock
 	private HotelRepository hotelRepository;
 
+	@Mock
+	private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
 	private BookingService bookingService;
 
 	@BeforeEach
 	void setUp() {
-		bookingService = new BookingService(bookingRepository, userRepository, roomRepository, hotelRepository);
+		bookingService = new BookingService(bookingRepository, userRepository, roomRepository, hotelRepository, eventPublisher);
 	}
 
 	@Test

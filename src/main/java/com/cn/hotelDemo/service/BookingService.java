@@ -7,12 +7,15 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.cn.hotelDemo.dto.BookingRequest;
 import com.cn.hotelDemo.dto.BookingResponse;
+import com.cn.hotelDemo.event.BookingCancelledEvent;
+import com.cn.hotelDemo.event.BookingConfirmedEvent;
 import com.cn.hotelDemo.model.Booking;
 import com.cn.hotelDemo.model.BookingStatus;
 import com.cn.hotelDemo.model.Hotel;
@@ -31,13 +34,16 @@ public class BookingService {
 	private final UserRepository userRepository;
 	private final RoomRepository roomRepository;
 	private final HotelRepository hotelRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
 	public BookingService(BookingRepository bookingRepository, UserRepository userRepository,
-			RoomRepository roomRepository, HotelRepository hotelRepository) {
+			RoomRepository roomRepository, HotelRepository hotelRepository,
+			ApplicationEventPublisher eventPublisher) {
 		this.bookingRepository = bookingRepository;
 		this.userRepository = userRepository;
 		this.roomRepository = roomRepository;
 		this.hotelRepository = hotelRepository;
+		this.eventPublisher = eventPublisher;
 	}
 
 	@Transactional
@@ -103,6 +109,8 @@ public class BookingService {
 		booking.getStatus(); // Optional logging
 		booking.setStatus(BookingStatus.CANCELLED);
 		bookingRepository.save(booking);
+		
+		eventPublisher.publishEvent(new BookingCancelledEvent(this, booking));
 
 		return new BookingResponse(booking.getBookingReference(), booking.getStatus(),
 				"Booking cancelled successfully", booking.getId(), booking.getTotalPrice());
@@ -133,6 +141,11 @@ public class BookingService {
 		}
 
 		Booking savedBooking = bookingRepository.save(booking);
+		
+		if (status == BookingStatus.CONFIRMED) {
+			eventPublisher.publishEvent(new BookingConfirmedEvent(this, savedBooking));
+		}
+		
 		return new BookingResponse(savedBooking.getBookingReference(), savedBooking.getStatus(), message,
 				savedBooking.getId(), savedBooking.getTotalPrice());
 	}
