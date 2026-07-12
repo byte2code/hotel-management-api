@@ -4,26 +4,35 @@ import com.cn.hotelDemo.dto.HotelRequest;
 import com.cn.hotelDemo.model.Hotel;
 import com.cn.hotelDemo.repository.HotelRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
-@AutoConfigureMockMvc(addFilters = false) // Disable security filters for this test
+@AutoConfigureMockMvc(addFilters = false)
+@TestPropertySource(properties = {
+    "app.security.enabled=false",
+    "spring.autoconfigure.exclude=" +
+        "org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration," +
+        "org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration," +
+        "org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration," +
+        "org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration"
+})
 class HotelIntegrationTest extends BaseIntegrationTest {
+
+    @MockBean
+    private ClientRegistrationRepository clientRegistrationRepository;
 
     @Autowired
     private MockMvc mockMvc;
@@ -33,6 +42,11 @@ class HotelIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private HotelRepository hotelRepository;
+
+    @BeforeEach
+    void cleanDb() {
+        hotelRepository.deleteAll();
+    }
 
     @Test
     void shouldCreateHotelSuccessfully() throws Exception {
