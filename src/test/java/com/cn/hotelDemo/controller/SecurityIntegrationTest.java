@@ -1,5 +1,7 @@
 package com.cn.hotelDemo.controller;
 
+import com.cn.hotelDemo.integration.BaseIntegrationTest;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -20,7 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     "spring.autoconfigure.exclude=",
     "app.security.jwt-issuer-uri=https://accounts.google.com"
 })
-public class SecurityIntegrationTest {
+public class SecurityIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
