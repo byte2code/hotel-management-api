@@ -57,7 +57,7 @@ import com.cn.hotelDemo.repository.RoomRepository;
 import com.cn.hotelDemo.repository.UserRepository;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @Import(BookingFlowIntegrationTest.TestAuthenticationConfiguration.class)
 class BookingFlowIntegrationTest {
 
