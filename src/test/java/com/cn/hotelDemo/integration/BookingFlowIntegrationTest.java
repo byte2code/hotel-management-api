@@ -61,6 +61,13 @@ import com.cn.hotelDemo.repository.UserRepository;
 @Import(BookingFlowIntegrationTest.TestAuthenticationConfiguration.class)
 class BookingFlowIntegrationTest {
 
+	private static final String TEST_AUTO_CONFIG_EXCLUDES = String.join(",",
+			"org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration",
+			"org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration",
+			"org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration",
+			"org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration",
+			"org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration");
+
 	@Container
 	static final MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
 			.withDatabaseName("hotel_test")
@@ -92,6 +99,7 @@ class BookingFlowIntegrationTest {
 		registry.add("spring.datasource.password", mysql::getPassword);
 		registry.add("spring.cache.type", () -> "simple");
 		registry.add("app.security.enabled", () -> "false");
+		registry.add("spring.autoconfigure.exclude", () -> TEST_AUTO_CONFIG_EXCLUDES);
 	}
 
 	@Test
