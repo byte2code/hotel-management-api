@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [v9.6.0] - 2026-07-17
+
+### Summary
+Prepared the Hotel Management API for Railway deployment by externalizing runtime configuration, adding container and Railway manifests, and refreshing the README with a live demo section.
+
+### Highlights
+- Replaced datasource, Redis, Google OAuth, Keycloak client ID/secret, and JWT issuer values in `application.yml` with environment-variable references.
+- Added `.env.example` with commented placeholders for the Railway and local-development variables.
+- Added `Dockerfile` and `railway.json` to support container-based Railway deployment with an `/actuator/health` check.
+- Updated `README.md` with a live demo link placeholder and refreshed environment-variable documentation.
+
 ## [v9.5.0] - 2026-06-18
 
 ### Summary

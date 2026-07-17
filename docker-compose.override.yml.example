@@ -2,6 +2,14 @@
 services:
   app:
     environment:
-      - DB_HOST=localhost
+      - DB_URL=jdbc:mysql://localhost:3306/hotel?sessionVariables=sql_mode='NO_ENGINE_SUBSTITUTION'&jdbcCompliantTruncation=false&DB_CLOSE_ON_EXIT=FALSE
+      - DB_USERNAME=demouser
       - DB_PASSWORD=changeme
+      - KEYCLOAK_CLIENT_ID=hotelDemoApplication
+      - JWT_ISSUER_URI=https://lemur-12.cloud-iam.com/auth/realms/hotel-demo
       - KEYCLOAK_CLIENT_SECRET=changeme
+      - KEYCLOAK_AUTH_SERVER_URL=https://lemur-12.cloud-iam.com/auth
+      - GOOGLE_CLIENT_ID=your-google-client-id
+      - GOOGLE_CLIENT_SECRET=your-google-client-secret
+      - REDIS_HOST=localhost
+      - REDIS_PORT=6379

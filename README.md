@@ -6,6 +6,12 @@
 ![Tests](https://img.shields.io/badge/tests-17%20passing-brightgreen?logo=junit5&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
+## Live demo
+
+Live: [https://your-app.railway.app/swagger-ui.html](link goes here after deployment)
+
+Swagger UI is the interactive API demo — no separate frontend needed.
+
 Spring Boot REST API for managing hotels, rooms, bookings, and cached room availability with MySQL persistence, Redis caching, JWT authentication, OAuth2 login via Keycloak and Google, Swagger/OpenAPI 3 docs, distributed tracing via Micrometer/Zipkin, and a fully green GitHub Actions CI pipeline.
 
 ---
@@ -148,14 +154,15 @@ The application uses environment variables for sensitive or environment-specific
 
 | Variable | Description | Default |
 | --- | --- | --- |
-| `DB_HOST` | MySQL server hostname | `localhost` |
+| `DB_URL` | Full MySQL JDBC connection URL | — |
+| `DB_USERNAME` | MySQL username | `demouser` |
 | `DB_PASSWORD` | MySQL database password | — |
-| `DATASOURCE_USERNAME` | MySQL username | `demouser` |
+| `KEYCLOAK_CLIENT_ID` | Keycloak/OAuth client ID | `hotelDemoApplication` |
 | `KEYCLOAK_CLIENT_SECRET` | Keycloak OIDC client secret | — |
-| `KEYCLOAK_ISSUER_URI` | Keycloak token issuer realm URI | — |
+| `JWT_ISSUER_URI` | Keycloak/JWT issuer URI used by Spring Security | — |
 | `KEYCLOAK_AUTH_SERVER_URL` | Keycloak authentication server endpoint | — |
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID (optional) | — |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret (optional) | — |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID | — |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | — |
 | `REDIS_HOST` | Redis server hostname | `localhost` |
 | `REDIS_PORT` | Redis server port | `6379` |
 
