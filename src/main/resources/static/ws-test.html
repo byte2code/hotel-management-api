@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Hotel Booking WebSocket Test</title>
+	<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+	<style>
+		:root {
+			color-scheme: light;
+			--bg: #f5f7fb;
+			--card: #ffffff;
+			--text: #14213d;
+			--muted: #6b7280;
+			--accent: #2563eb;
+			--border: #dbe3f0;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		body {
+			margin: 0;
+			font-family: Inter, Arial, sans-serif;
+			background: linear-gradient(180deg, #f8fbff 0%, #eef3fb 100%);
+			color: var(--text);
+		}
+
+		.container {
+			max-width: 900px;
+			margin: 0 auto;
+			padding: 40px 20px 56px;
+		}
+
+		h1 {
+			margin: 0 0 8px;
+			font-size: 2rem;
+		}
+
+		p {
+			margin: 0 0 18px;
+			color: var(--muted);
+			line-height: 1.5;
+		}
+
+		.card {
+			background: var(--card);
+			border: 1px solid var(--border);
+			border-radius: 18px;
+			box-shadow: 0 10px 30px rgba(20, 33, 61, 0.06);
+			padding: 20px;
+			margin-top: 18px;
+		}
+
+		.controls {
+			display: flex;
+			gap: 12px;
+			flex-wrap: wrap;
+			margin-bottom: 16px;
+		}
+
+		input {
+			flex: 1 1 240px;
+			padding: 12px 14px;
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			font-size: 1rem;
+		}
+
+		button {
+			padding: 12px 18px;
+			border: 0;
+			border-radius: 12px;
+			background: var(--accent);
+			color: #fff;
+			font-weight: 600;
+			cursor: pointer;
+		}
+
+		button:hover {
+			filter: brightness(1.05);
+		}
+
+		.status {
+			font-size: 0.95rem;
+			margin-bottom: 14px;
+			color: var(--muted);
+		}
+
+		.messages {
+			display: grid;
+			gap: 12px;
+		}
+
+		.message {
+			border: 1px solid var(--border);
+			border-radius: 14px;
+			padding: 14px;
+			background: #fbfdff;
+			white-space: pre-wrap;
+			word-break: break-word;
+		}
+
+		.message strong {
+			display: block;
+			margin-bottom: 6px;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<h1>Booking Notifications Test</h1>
+		<p>Connect to the Hotel Management API WebSocket endpoint and listen for booking updates in real time.</p>
+
+		<div class="card">
+			<div class="controls">
+				<input id="hotelId" type="text" placeholder="Enter hotel ID" />
+				<button id="connectBtn" type="button">Connect</button>
+			</div>
+			<div id="status" class="status">Disconnected</div>
+			<div id="messages" class="messages"></div>
+		</div>
+	</div>
+
+	<script>
+		const hotelIdInput = document.getElementById('hotelId');
+		const connectBtn = document.getElementById('connectBtn');
+		const statusEl = document.getElementById('status');
+		const messagesEl = document.getElementById('messages');
+		let stompClient = null;
+
+		function setStatus(text) {
+			statusEl.textContent = text;
+		}
+
+		function addMessage(title, body) {
+			const node = document.createElement('div');
+			node.className = 'message';
+			node.innerHTML = `<strong>${title}</strong><div>${body}</div>`;
+			messagesEl.prepend(node);
+		}
+
+		function prettyPrint(raw) {
+			try {
+				return `<pre>${JSON.stringify(JSON.parse(raw), null, 2)}</pre>`;
+			} catch (error) {
+				return `<pre>${raw}</pre>`;
+			}
+		}
+
+		function connect() {
+			const hotelId = hotelIdInput.value.trim();
+
+			if (!hotelId) {
+				setStatus('Enter a hotel ID first.');
+				return;
+			}
+
+			if (stompClient) {
+				stompClient.deactivate();
+			}
+
+			messagesEl.innerHTML = '';
+			setStatus(`Connecting to /topic/bookings/${hotelId}...`);
+
+			stompClient = new StompJs.Client({
+				webSocketFactory: () => new SockJS('/ws'),
+				reconnectDelay: 0,
+				debug: () => {}
+			});
+
+			stompClient.onConnect = () => {
+				setStatus(`Connected. Subscribed to /topic/bookings/${hotelId}.`);
+				stompClient.subscribe(`/topic/bookings/${hotelId}`, (frame) => {
+					addMessage('Booking notification', prettyPrint(frame.body));
+				});
+			};
+
+			stompClient.onStompError = (frame) => {
+				setStatus(`STOMP error: ${frame.headers['message'] || 'Unknown error'}`);
+				addMessage('Error', frame.body || 'No error details provided.');
+			};
+
+			stompClient.onWebSocketClose = () => {
+				setStatus('Disconnected');
+			};
+
+			stompClient.activate();
+		}
+
+		connectBtn.addEventListener('click', connect);
+		hotelIdInput.addEventListener('keydown', (event) => {
+			if (event.key === 'Enter') {
+				connect();
+			}
+		});
+	</script>
+</body>
+</html>

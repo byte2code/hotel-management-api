@@ -11,7 +11,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
+import com.cn.hotelDemo.dto.BookingNotification;
 import com.cn.hotelDemo.dto.BookingRequest;
 import com.cn.hotelDemo.dto.BookingResponse;
 import com.cn.hotelDemo.event.BookingCancelledEvent;
@@ -34,15 +36,17 @@ public class BookingService {
 	private final UserRepository userRepository;
 	private final RoomRepository roomRepository;
 	private final HotelRepository hotelRepository;
+	private final SimpMessagingTemplate messagingTemplate;
 	private final ApplicationEventPublisher eventPublisher;
 
 	public BookingService(BookingRepository bookingRepository, UserRepository userRepository,
-			RoomRepository roomRepository, HotelRepository hotelRepository,
+			RoomRepository roomRepository, HotelRepository hotelRepository, SimpMessagingTemplate messagingTemplate,
 			ApplicationEventPublisher eventPublisher) {
 		this.bookingRepository = bookingRepository;
 		this.userRepository = userRepository;
 		this.roomRepository = roomRepository;
 		this.hotelRepository = hotelRepository;
+		this.messagingTemplate = messagingTemplate;
 		this.eventPublisher = eventPublisher;
 	}
 
@@ -141,6 +145,12 @@ public class BookingService {
 		}
 
 		Booking savedBooking = bookingRepository.save(booking);
+
+		if (status == BookingStatus.CONFIRMED || status == BookingStatus.REJECTED) {
+			messagingTemplate.convertAndSend("/topic/bookings/" + hotel.getId(),
+					new BookingNotification(savedBooking.getBookingReference(), savedBooking.getStatus().name(),
+							message, hotel.getId(), room.getId()));
+		}
 		
 		if (status == BookingStatus.CONFIRMED) {
 			eventPublisher.publishEvent(new BookingConfirmedEvent(this, savedBooking));

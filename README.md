@@ -3,7 +3,7 @@
 ![CI](https://github.com/byte2code/hotel-management-api/actions/workflows/ci.yml/badge.svg)
 ![Java](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-6DB33F?logo=springboot&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-17%20passing-brightgreen?logo=junit5&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-passing-brightgreen?logo=junit5&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 ## Live demo
@@ -12,7 +12,7 @@ Live: [https://your-app.railway.app/swagger-ui.html](link goes here after deploy
 
 Swagger UI is the interactive API demo — no separate frontend needed.
 
-Spring Boot REST API for managing hotels, rooms, bookings, and cached room availability with MySQL persistence, Redis caching, JWT authentication, OAuth2 login via Keycloak and Google, Swagger/OpenAPI 3 docs, distributed tracing via Micrometer/Zipkin, and a fully green GitHub Actions CI pipeline.
+Spring Boot REST API for managing hotels, rooms, bookings, and cached room availability with MySQL persistence, Redis caching, JWT authentication, OAuth2 login via Keycloak and Google, WebSocket/STOMP booking notifications, Swagger/OpenAPI 3 docs, distributed tracing via Micrometer/Zipkin, and a fully green GitHub Actions CI pipeline.
 
 ---
 
@@ -34,7 +34,7 @@ This is a production-grade portfolio capstone demonstrating end-to-end backend e
 | **Persistence layer** | MySQL for all domain data; Hibernate pessimistic locking for concurrent bookings |
 | **Observability layer** | Micrometer Tracing + Zipkin for distributed trace/span visibility across requests |
 | **Test layer** | Shared-context Spring Boot integration tests with Testcontainers (CI) and H2 (local) |
-| **View layer** | Thymeleaf login page for browser sign-in |
+| **View layer** | Thymeleaf login page plus static ws-test.html demo page |
 
 ---
 
@@ -55,6 +55,7 @@ This is a production-grade portfolio capstone demonstrating end-to-end backend e
 - Concurrency-safe booking writes using pessimistic locking
 - Redis-backed caching for room availability searches
 - Cache invalidation when rooms or bookings change
+- WebSocket/STOMP push notifications for confirmed and rejected bookings
 - Nightly rate × nights total price calculation in `BookingService`
 - Promotional discount field (`discount`) on `HotelRequest`
 - Booking cancellation flow with state-machine validation (only `CONFIRMED → CANCELLED`)
@@ -74,7 +75,7 @@ This is a production-grade portfolio capstone demonstrating end-to-end backend e
 - **Multi-class Spring Security integration tests sharing a single cached Spring context**
 - `@WithMockUser` + CSRF post-processor for authenticated `MockMvc` test requests
 - `@BeforeEach` database cleanup to prevent test pollution across shared-context tests
-- **17-test suite, all green on GitHub Actions CI (ubuntu-latest, JDK 17, Maven)**
+- **Multi-class booking and security test suite, all green on GitHub Actions CI (ubuntu-latest, JDK 17, Maven)**
 
 ---
 
@@ -90,9 +91,12 @@ This is a production-grade portfolio capstone demonstrating end-to-end backend e
 - Spring OAuth2 Resource Server
 - Spring Cache
 - Spring Boot Actuator
+- Spring WebSocket
 - Micrometer Tracing (Brave bridge)
 - Zipkin Reporter
 - Thymeleaf
+- STOMP
+- SockJS
 - Redis
 - MySQL
 - Hibernate/JPA
@@ -134,6 +138,8 @@ hotel/
     │   │   └── HotelDemoApplication.java
     │   └── resources/
     │       ├── application.yml      (tracing, actuator, log pattern with traceId/spanId)
+    │       ├── static/
+    │       │   └── ws-test.html    (real-time booking notification demo page)
     │       └── templates/
     │           └── login.html
     └── test/
@@ -189,6 +195,7 @@ See [.env.example](.env.example) and [docker-compose.override.yml.example](docke
 6. Open `http://localhost:8082/login` for the custom login page.
 7. Browse API docs at `http://localhost:8082/swagger-ui.html`.
 8. View metrics at `http://localhost:8082/actuator/metrics`.
+9. Open `http://localhost:8082/ws-test.html` to subscribe to booking notifications for a hotel ID.
 
 ### Running Tests
 
@@ -253,6 +260,10 @@ bash scripts/load-test.sh
 | `DELETE` | `/user/remove/id/{id}` | ADMIN |
 | `GET` | `/audit/getAll` | ADMIN |
 | `GET` | `/login` | Public |
+
+## Real-time notifications
+
+After making a booking, all clients subscribed to `/topic/bookings/{hotelId}` receive a push notification. Test at `/ws-test.html`.
 
 ---
 
@@ -375,7 +386,9 @@ flowchart LR
     CancelEvent --> Notification
 
     Confirmed --> CacheEvict["Evict room-availability cache"]
+    Confirmed --> WsPush["WebSocket push notification\n/topic/bookings/{hotelId}"]
     Rejected --> CacheEvict
+    Rejected --> WsPush
     Cancelled --> CacheEvict
 
     Confirmed --> AuditLog["Audit log"]
@@ -419,7 +432,7 @@ flowchart LR
     Actuator --> Metrics["Micrometer Metrics"]
     Metrics --> Zipkin["Zipkin Tracing UI\n:9411"]
 
-    CI["GitHub Actions CI"] --> Tests["17 tests — all green"]
+    CI["GitHub Actions CI"] --> Tests["Integration suite — all green"]
 ```
 
 ---
@@ -449,7 +462,7 @@ Start Zipkin locally: `docker-compose up -d zipkin` → browse `http://localhost
 
 ## Integration Test Suite (Phase 3)
 
-The project ships a **17-test suite** across 5 test classes, all green on GitHub Actions CI (`ubuntu-latest`, JDK 17).
+The project ships a **multi-class test suite** across 7 test classes, all green on GitHub Actions CI (`ubuntu-latest`, JDK 17).
 
 | Test Class | Strategy | What it verifies |
 | --- | --- | --- |
@@ -457,6 +470,7 @@ The project ships a **17-test suite** across 5 test classes, all green on GitHub
 | `SecurityIntegrationTest` | `@SpringBootTest` + shared Spring context | 6 security scenarios: 401, 200 public, NORMAL→403, ADMIN→200, NORMAL→404 (no data leakage) |
 | `HotelSecurityConfigTest` | `@WebMvcTest` + `@Import(HotelSecurityConfig)` | Security rule assertions at the filter chain level |
 | `BookingServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Booking business logic: confirmed, rejected, invalid cancel |
+| `BookingFlowIntegrationTest` | `@SpringBootTest` + `@Testcontainers` + MySQLContainer | End-to-end booking happy path with persisted booking, audit log, and WebSocket notification |
 | `RoomServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Availability lookup and cache interaction |
 | `AuditServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Audit log entry creation |
 

@@ -3,6 +3,7 @@ package com.cn.hotelDemo.service;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 import java.math.BigDecimal;
@@ -16,7 +17,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
+import com.cn.hotelDemo.dto.BookingNotification;
 import com.cn.hotelDemo.dto.BookingRequest;
 import com.cn.hotelDemo.dto.BookingResponse;
 import com.cn.hotelDemo.model.Booking;
@@ -48,11 +51,15 @@ class BookingServiceTest {
 	@Mock
 	private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
+	@Mock
+	private SimpMessagingTemplate messagingTemplate;
+
 	private BookingService bookingService;
 
 	@BeforeEach
 	void setUp() {
-		bookingService = new BookingService(bookingRepository, userRepository, roomRepository, hotelRepository, eventPublisher);
+		bookingService = new BookingService(bookingRepository, userRepository, roomRepository, hotelRepository,
+				messagingTemplate, eventPublisher);
 	}
 
 	@Test
@@ -84,6 +91,10 @@ class BookingServiceTest {
 		assertEquals(BookingStatus.CONFIRMED, response.getStatus());
 		assertTrue(response.getMessage().contains("confirmed"));
 		verify(roomRepository).findByIdForUpdate(10L);
+		verify(messagingTemplate).convertAndSend(eq("/topic/bookings/1"),
+				argThat((BookingNotification notification) -> "CONFIRMED".equals(notification.getStatus())
+						&& notification.getHotelId().equals(1L) && notification.getRoomId().equals(10L)
+						&& notification.getMessage().contains("confirmed")));
 	}
 
 	@Test
@@ -119,5 +130,9 @@ class BookingServiceTest {
 		assertEquals(BookingStatus.REJECTED, response.getStatus());
 		assertTrue(response.getMessage().contains("requested date range"));
 		verify(roomRepository).findByIdForUpdate(10L);
+		verify(messagingTemplate).convertAndSend(eq("/topic/bookings/1"),
+				argThat((BookingNotification notification) -> "REJECTED".equals(notification.getStatus())
+						&& notification.getHotelId().equals(1L) && notification.getRoomId().equals(10L)
+						&& notification.getMessage().contains("requested date range")));
 	}
 }
