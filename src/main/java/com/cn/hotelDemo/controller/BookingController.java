@@ -40,7 +40,7 @@ public class BookingController {
 	@PostMapping("/create")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
 	@Operation(summary = "Create a new booking")
-	@AuditLogged(action = "#'BOOKING_' + result.body.status.name()", resourceType = "BOOKING", resourceIdSpel = "#result.body.bookingId")
+	@AuditLogged(action = "#result != null ? 'BOOKING_' + #result.body.status.name() : 'UNKNOWN'", resourceType = "BOOKING", resourceIdSpel = "#result.body.bookingId")
 	public ResponseEntity<BookingResponse> createBooking(@Valid @RequestBody BookingRequest bookingRequest,
 			Authentication authentication) {
 		BookingResponse response = bookingService.createBooking(bookingRequest);
