@@ -116,6 +116,12 @@
 			<artifactId>zipkin-reporter-brave</artifactId>
 		</dependency>
 
+		<!-- AOP -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-aop</artifactId>
+		</dependency>
+
 		<!-- Testcontainers -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

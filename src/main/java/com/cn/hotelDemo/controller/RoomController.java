@@ -19,7 +19,7 @@ import org.springframework.format.annotation.DateTimeFormat.ISO;
 
 import com.cn.hotelDemo.dto.RoomRequest;
 import com.cn.hotelDemo.model.Room;
-import com.cn.hotelDemo.service.AuditService;
+import com.cn.hotelDemo.annotation.AuditLogged;
 import com.cn.hotelDemo.service.RoomService;
 
 import jakarta.validation.Valid;
@@ -35,21 +35,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class RoomController {
 
 	private final RoomService roomService;
-	private final AuditService auditService;
-
-	public RoomController(RoomService roomService, AuditService auditService) {
+	public RoomController(RoomService roomService) {
 		this.roomService = roomService;
-		this.auditService = auditService;
 	}
 
 	@PostMapping("/create")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
 	@Operation(summary = "Create a new room in a hotel")
+	@AuditLogged(action = "ROOM_CREATED", resourceType = "ROOM", resourceIdSpel = "#result.body.id")
 	public ResponseEntity<Room> createRoom(@Valid @RequestBody RoomRequest roomRequest, Authentication authentication) {
 		Room room = roomService.createRoom(roomRequest);
-		auditService.record("ROOM_CREATED", authentication.getName(), "ROOM", String.valueOf(room.getId()), "SUCCESS",
-				"Room created for hotelId=%s, roomNumber=%s".formatted(roomRequest.getHotelId(),
-						roomRequest.getRoomNumber()));
 		return new ResponseEntity<>(room, HttpStatus.CREATED);
 	}
 
@@ -63,15 +58,13 @@ public class RoomController {
 	@GetMapping("/hotel/{hotelId}/available")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
 	@Operation(summary = "Check room availability between dates for a hotel")
+	@AuditLogged(action = "ROOM_AVAILABILITY_SEARCHED", resourceType = "ROOM", resourceIdSpel = "#hotelId")
 	public ResponseEntity<List<Room>> getAvailableRoomsByHotel(
 			@PathVariable Long hotelId,
 			Authentication authentication,
 			@RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate checkInDate,
 			@RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate checkOutDate) {
 		List<Room> rooms = roomService.getAvailableRoomsByHotelAndDates(hotelId, checkInDate, checkOutDate);
-		auditService.record("ROOM_AVAILABILITY_SEARCHED", authentication.getName(), "ROOM", String.valueOf(hotelId),
-				"SUCCESS", "Availability checked for hotelId=%s between %s and %s".formatted(hotelId, checkInDate,
-						checkOutDate));
 		return ResponseEntity.ok(rooms);
 	}
 
@@ -80,9 +73,6 @@ public class RoomController {
 	@Operation(summary = "Get a room by its ID")
 	public ResponseEntity<Room> getRoomById(@PathVariable Long id) {
 		Room room = roomService.getRoomById(id);
-		if (room == null) {
-			return ResponseEntity.notFound().build();
-		}
 		return ResponseEntity.ok(room);
 	}
 
