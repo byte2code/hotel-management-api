@@ -25,5 +25,5 @@ jobs:
           distribution: temurin
           cache: maven
 
-      - name: Run tests
-        run: mvn clean test --batch-mode --no-transfer-progress
+      - name: Build and Test
+        run: mvn clean verify --batch-mode --no-transfer-progress
