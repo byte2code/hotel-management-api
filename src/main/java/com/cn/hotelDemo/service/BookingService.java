@@ -89,7 +89,7 @@ public class BookingService {
 	}
 
 	public Booking getBookingById(Long id) {
-		return bookingRepository.findById(id).orElse(null);
+		return bookingRepository.findById(id).orElseThrow(() -> new com.cn.hotelDemo.exception.BookingNotFoundException(id));
 	}
 
 	public List<Booking> getBookingsByUserId(Long userId) {

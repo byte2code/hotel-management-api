@@ -20,7 +20,7 @@ import jakarta.validation.Valid;
 import com.cn.hotelDemo.dto.HotelRequest;
 import com.cn.hotelDemo.model.Hotel;
 import com.cn.hotelDemo.service.HotelService;
-import com.cn.hotelDemo.service.AuditService;
+import com.cn.hotelDemo.annotation.AuditLogged;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -34,29 +34,22 @@ public class HotelController {
 
 	@Autowired 
 	HotelService hotelService;
-
-	@Autowired
-	AuditService auditService;
 	
 	@GetMapping("/userDetail")
 	@Operation(summary = "Get current authenticated user details from OIDC")
+	@AuditLogged(action = "OIDC_PROFILE_VIEWED", resourceType = "AUTH", resourceIdSpel = "#oidcUser.email")
 	public String getDetails(@AuthenticationPrincipal OidcUser oidcUser) {
-		String details = "User name: %s, email: %s".formatted(oidcUser.getFullName(), oidcUser.getEmail());
-		auditService.record("OIDC_PROFILE_VIEWED", oidcUser.getEmail(), "AUTH", oidcUser.getEmail(), "SUCCESS",
-				"Authenticated profile details were requested");
-		return details;
+		return "User name: %s, email: %s".formatted(oidcUser.getFullName(), oidcUser.getEmail());
 	}
 	
 	@PostMapping("/create")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
 	@Operation(summary = "Create a new hotel (Admin only)")
-	public void createHotel(@Valid @RequestBody HotelRequest hotelRequest, Authentication authentication)
+	@AuditLogged(action = "HOTEL_CREATED", resourceType = "HOTEL", resourceIdSpel = "#result.id")
+	public Hotel createHotel(@Valid @RequestBody HotelRequest hotelRequest, Authentication authentication)
 	{
-		Hotel createdHotel = hotelService.createHotel(hotelRequest);
-		auditService.record("HOTEL_CREATED", authentication.getName(), "HOTEL", String.valueOf(createdHotel.getId()),
-				"SUCCESS", "Hotel created with name=%s, city=%s".formatted(createdHotel.getName(),
-						createdHotel.getCity()));
-	} 
+		return hotelService.createHotel(hotelRequest);
+	}
 	
 	@GetMapping("/id/{id}")
 	@PreAuthorize("hasRole('NORMAL') or hasAuthority('normal')")
@@ -77,11 +70,9 @@ public class HotelController {
 	@DeleteMapping("/remove/id/{id}")
 	@PreAuthorize("hasRole('admin') or hasAuthority('admin')")
 	@Operation(summary = "Delete a hotel by ID (Admin only)")
+	@AuditLogged(action = "HOTEL_DELETED", resourceType = "HOTEL", resourceIdSpel = "#id")
 	public void deleteHotelById(@PathVariable Long id, Authentication authentication)
 	{
 		hotelService.deleteHotelById(id);
-		auditService.record("HOTEL_DELETED", authentication.getName(), "HOTEL", String.valueOf(id), "SUCCESS",
-				"Hotel delete requested for id=%s".formatted(id));
-		
 	}
 }

@@ -79,7 +79,7 @@ public class RoomService {
 	}
 
 	public Room getRoomById(Long id) {
-		return roomRepository.findById(id).orElse(null);
+		return roomRepository.findById(id).orElseThrow(() -> new com.cn.hotelDemo.exception.RoomNotFoundException(id));
 	}
 
 	public List<Room> getAllRooms() {

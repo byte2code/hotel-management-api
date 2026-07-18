@@ -18,7 +18,7 @@ import com.cn.hotelDemo.dto.BookingRequest;
 import com.cn.hotelDemo.dto.BookingResponse;
 import com.cn.hotelDemo.model.Booking;
 import com.cn.hotelDemo.model.BookingStatus;
-import com.cn.hotelDemo.service.AuditService;
+import com.cn.hotelDemo.annotation.AuditLogged;
 import com.cn.hotelDemo.service.BookingService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,21 +33,17 @@ import jakarta.validation.Valid;
 public class BookingController {
 
 	private final BookingService bookingService;
-	private final AuditService auditService;
-
-	public BookingController(BookingService bookingService, AuditService auditService) {
+	public BookingController(BookingService bookingService) {
 		this.bookingService = bookingService;
-		this.auditService = auditService;
 	}
 
 	@PostMapping("/create")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
 	@Operation(summary = "Create a new booking")
+	@AuditLogged(action = "#result != null ? 'BOOKING_' + #result.body.status.name() : 'UNKNOWN'", resourceType = "BOOKING", resourceIdSpel = "#result.body.bookingId")
 	public ResponseEntity<BookingResponse> createBooking(@Valid @RequestBody BookingRequest bookingRequest,
 			Authentication authentication) {
 		BookingResponse response = bookingService.createBooking(bookingRequest);
-		auditService.record("BOOKING_" + response.getStatus().name(), authentication.getName(), "BOOKING",
-				String.valueOf(response.getBookingId()), response.getStatus().name(), response.getMessage());
 		return new ResponseEntity<>(response,
 				response.getStatus() == BookingStatus.CONFIRMED ? HttpStatus.CREATED : HttpStatus.CONFLICT);
 	}
@@ -57,9 +53,6 @@ public class BookingController {
 	@Operation(summary = "Get a booking by its ID")
 	public ResponseEntity<Booking> getBookingById(@PathVariable Long id) {
 		Booking booking = bookingService.getBookingById(id);
-		if (booking == null) {
-			return ResponseEntity.notFound().build();
-		}
 		return ResponseEntity.ok(booking);
 	}
 
@@ -87,11 +80,9 @@ public class BookingController {
 	@PostMapping("/cancel/{id}")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
 	@Operation(summary = "Cancel a booking by its ID")
+	@AuditLogged(action = "BOOKING_CANCELLED", resourceType = "BOOKING", resourceIdSpel = "#result.body.bookingId")
 	public ResponseEntity<BookingResponse> cancelBooking(@PathVariable Long id, Authentication authentication) {
 		Booking booking = bookingService.getBookingById(id);
-		if (booking == null) {
-			return ResponseEntity.notFound().build();
-		}
 		
 		boolean isAdmin = authentication.getAuthorities().stream()
 				.anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("admin"));
@@ -102,8 +93,6 @@ public class BookingController {
 		}
 
 		BookingResponse response = bookingService.cancelBooking(id);
-		auditService.record("BOOKING_CANCELLED", authentication.getName(), "BOOKING",
-				String.valueOf(response.getBookingId()), response.getStatus().name(), response.getMessage());
 		return ResponseEntity.ok(response);
 	}
 }

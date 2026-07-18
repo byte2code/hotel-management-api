@@ -15,7 +15,7 @@ import jakarta.validation.Valid;
 
 import com.cn.hotelDemo.dto.UserRequest;
 import com.cn.hotelDemo.model.User;
-import com.cn.hotelDemo.service.AuditService;
+import com.cn.hotelDemo.annotation.AuditLogged;
 import com.cn.hotelDemo.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,12 +26,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequestMapping("/user")
 @Tag(name = "User Controller", description = "Endpoints for managing users")
 public class UserController {
-    
     @Autowired
     UserService userService;
-
-    @Autowired
-    AuditService auditService;
 
     @GetMapping("/getUsers")
     @Operation(summary = "Get all users")
@@ -49,21 +45,18 @@ public class UserController {
 
 	@PostMapping("/createUser")
     @Operation(summary = "Register a new user (Public)")
-	public void createUser(@Valid @RequestBody UserRequest userRequest)
+    @AuditLogged(action = "USER_CREATED", resourceType = "USER", resourceIdSpel = "#result.id")
+	public User createUser(@Valid @RequestBody UserRequest userRequest)
 	{
-		User createdUser = userService.createUser(userRequest);
-		auditService.record("USER_CREATED", userRequest.getUsername(), "USER", String.valueOf(createdUser.getId()),
-				"SUCCESS", "Public user registration completed for email=%s".formatted(userRequest.getEmail()));
+		return userService.createUser(userRequest);
 	}
 
     @DeleteMapping("/remove/id/{id}")
     @Operation(summary = "Delete a user by ID")
     @SecurityRequirement(name = "Bearer Authentication")
+    @AuditLogged(action = "USER_DELETED", resourceType = "USER", resourceIdSpel = "#id")
 	public void deleteUserById(@PathVariable Long id)
 	{
 		userService.deleteUserById(id);
-		auditService.record("USER_DELETED", "system", "USER", String.valueOf(id), "SUCCESS",
-				"User delete requested for id=%s".formatted(id));
-		
 	}
 }
