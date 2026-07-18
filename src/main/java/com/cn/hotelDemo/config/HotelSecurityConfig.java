@@ -54,7 +54,8 @@ public class HotelSecurityConfig {
 	{
 		http
 			.authorizeHttpRequests(authorize -> authorize
-					.requestMatchers("/login", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+					.requestMatchers("/login", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
+							"/ws-test.html", "/ws", "/ws/**").permitAll()
 					.anyRequest().authenticated()
 			)
 			
