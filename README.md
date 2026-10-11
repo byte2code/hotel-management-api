@@ -4,162 +4,461 @@
 ![Java](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-6DB33F?logo=springboot&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-passing-brightgreen?logo=junit5&logoColor=white)
+![Testcontainers](https://img.shields.io/badge/Testcontainers-MySQL-blue?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-## Live demo
+## Live Demo
 
 Live: [https://your-app.railway.app/swagger-ui.html](link goes here after deployment)
 
 Swagger UI is the interactive API demo — no separate frontend needed.
 
-Spring Boot REST API for managing hotels, rooms, bookings, and cached room availability with MySQL persistence, Redis caching, JWT authentication, OAuth2 login via Keycloak and Google, WebSocket/STOMP booking notifications, Swagger/OpenAPI 3 docs, distributed tracing via Micrometer/Zipkin, and a fully green GitHub Actions CI pipeline.
+---
+
+A **production-grade Spring Boot REST API** for managing hotels, rooms, and bookings. The application features a rich approval-based booking workflow, JWT/OAuth2 security, Redis caching, rate limiting via Bucket4j, async email notifications, custom Micrometer metrics, AOP-driven audit logging, WebSocket/STOMP push notifications, paginated endpoints, Swagger/OpenAPI 3 docs, distributed tracing via Micrometer/Zipkin, and a fully green GitHub Actions CI pipeline backed by Testcontainers MySQL.
 
 ---
 
-## Overview
+## What's New — Upgrade Highlights
 
-This is a production-grade portfolio capstone demonstrating end-to-end backend engineering. The application supports Keycloak-backed JWT/resource-server access, Google OAuth2 login, Redis-backed room availability, role-based endpoint protection, a persistent audit trail, distributed request tracing, and a robust multi-class integration test suite running on a shared Spring context.
+> These improvements were added across 10 phased commits on top of the original baseline.
+
+| Phase | Feature | Impact |
+|-------|---------|--------|
+| **1** | Lombok annotations on all entities | Eliminated ~40% of entity boilerplate; added `@Builder`, `@EqualsAndHashCode(of="id")`, safe `@ToString` |
+| **2** | Hotel entity enrichment | Added `address`, `state`, `country`, `phoneNumber`, `email`, `website`, `description`, `totalRooms`, `starCategory`, `createdAt`, `updatedAt` with `@PrePersist`/`@PreUpdate` |
+| **3** | Booking lifecycle upgrade | 4-state machine (`REQUESTED → CONFIRMED / REJECTED → CANCELLED`), `rejectionReason` field, dedicated confirm/reject PATCH endpoints |
+| **4** | Async email notifications | `@Async` `NotificationListener` — decoupled from booking transaction, non-blocking |
+| **5** | Bucket4j rate limiting | Per-user/IP limits: 20 bookings/min · 5 registrations/hr · 60 availability searches/min |
+| **6** | Pagination everywhere | All list endpoints accept `page`, `size`, `sortBy`, `direction` query params |
+| **7** | Custom Micrometer metrics | `BookingMetrics` — counters for created/confirmed/rejected/cancelled; gauge for active bookings |
+| **8** | AOP audit logging | `@AuditLogged` annotation + `AuditAspect` with SpEL resource-ID extraction |
+| **9** | End-to-end test suite | `EndToEndWorkflowIntegrationTest` covering the full lifecycle on real MySQL via Testcontainers |
+| **10** | CI hardening | Fixed H2↔Testcontainers driver clash; all tests green on GitHub Actions |
 
 ---
 
 ## Architecture
 
-| Layer | Responsibility |
-| --- | --- |
-| **API layer** | Exposes hotel, room, user, booking, and audit endpoints |
-| **Domain layer** | Models hotels, rooms, users, and booking lifecycle states |
-| **Security layer** | JWT, OAuth2 login, method-level authorization, and security audit filter |
-| **Cache layer** | Redis-backed room-availability lookups with automatic invalidation on booking changes |
-| **Audit layer** | Persists booking and security-sensitive actions in a structured audit log |
-| **Persistence layer** | MySQL for all domain data; Hibernate pessimistic locking for concurrent bookings |
-| **Observability layer** | Micrometer Tracing + Zipkin for distributed trace/span visibility across requests |
-| **Test layer** | Shared-context Spring Boot integration tests with Testcontainers (CI) and H2 (local) |
-| **View layer** | Thymeleaf login page plus static ws-test.html demo page |
+```mermaid
+flowchart TB
+    subgraph Client Layer
+        Swagger["🌐 Swagger UI / REST Client"]
+        WS["🔔 ws-test.html (WebSocket)"]
+    end
+
+    subgraph Security Layer
+        RateLimit["RateLimitingFilter\n(Bucket4j — per user/IP)"]
+        AuditFilter["SecurityAuditFilter\n(traceId + user on every req)"]
+        OAuth["HotelSecurityConfig\n(JWT + OAuth2 + @PreAuthorize)"]
+    end
+
+    subgraph API Layer
+        Hotel["HotelController"]
+        Room["RoomController"]
+        Booking["BookingController"]
+        User["UserController"]
+        Audit["AuditController"]
+    end
+
+    subgraph Service Layer
+        BS["BookingService\n(state machine + price calc)"]
+        HS["HotelService"]
+        RS["RoomService"]
+        US["UserService"]
+        AS["AuditService"]
+        NS["NotificationService\n(@Async)"]
+    end
+
+    subgraph Cross-Cutting
+        AOP["AuditAspect\n(@AuditLogged + SpEL)"]
+        Metrics["BookingMetrics\n(Micrometer counters)"]
+        Events["Spring Application Events"]
+    end
+
+    subgraph Persistence Layer
+        MySQL[("MySQL\n(JPA / Hibernate)")]
+        Redis[("Redis\n(room availability cache)")]
+    end
+
+    subgraph Observability
+        Actuator["Spring Boot Actuator"]
+        Zipkin["Zipkin :9411"]
+        Prometheus["Prometheus-ready metrics"]
+    end
+
+    Swagger --> RateLimit --> AuditFilter --> OAuth
+    WS --> Booking
+    OAuth --> Hotel & Room & Booking & User & Audit
+    Hotel --> HS --> MySQL
+    Room --> RS --> Redis & MySQL
+    Booking --> BS --> MySQL
+    BS --> Events --> NS
+    BS --> Metrics
+    BS -.-> AOP
+    Actuator --> Prometheus --> Zipkin
+```
 
 ---
 
-## Concepts and Features Covered
+## Booking State Machine
 
-- Spring Boot REST API setup
-- Spring Data JPA repository pattern
-- MySQL-backed persistence
-- Spring Security with JWT resource-server support
-- OAuth2 login with Keycloak
-- OAuth2 login support for Google
-- Method-level authorization with `@PreAuthorize`
-- Public user registration and user listing
-- Hotel creation, retrieval, listing, and deletion endpoints
-- Room management for hotel inventory
-- Booking creation with request/confirm/reject/cancel statuses
-- Date-range validation for room availability
-- Concurrency-safe booking writes using pessimistic locking
-- Redis-backed caching for room availability searches
-- Cache invalidation when rooms or bookings change
-- WebSocket/STOMP push notifications for confirmed and rejected bookings
-- Nightly rate × nights total price calculation in `BookingService`
-- Promotional discount field (`discount`) on `HotelRequest`
-- Booking cancellation flow with state-machine validation (only `CONFIRMED → CANCELLED`)
-- Spring Application Events fired on booking confirmed/cancelled
-- Notification stub listener logging "send email to user"
-- Persistent audit logging for login, profile access, CRUD, and booking actions
-- `SecurityAuditFilter` injecting correlation IDs (traceId/spanId) into all audit log lines
-- Micrometer Tracing (Brave bridge) with Zipkin span export
-- Spring Boot Actuator `/actuator/metrics` and `/actuator/health` endpoints
-- Password encoding with BCrypt via `PasswordEncoderConfig`
-- Bean Validation (`@Valid`, `@NotBlank`, `@Min`, `@Max`, `@FutureOrPresent`) on all request DTOs
-- 400 field-level error responses from `GlobalExceptionHandler`
-- `/login` custom page backed by Thymeleaf
-- Google user authority mapping from the local user table
-- **Swagger/OpenAPI 3 integration for interactive API documentation at `/swagger-ui.html`**
-- Global exception handling via `@RestControllerAdvice` for structured JSON error responses
-- **Multi-class Spring Security integration tests sharing a single cached Spring context**
-- `@WithMockUser` + CSRF post-processor for authenticated `MockMvc` test requests
-- `@BeforeEach` database cleanup to prevent test pollution across shared-context tests
-- **Multi-class booking and security test suite, all green on GitHub Actions CI (ubuntu-latest, JDK 17, Maven)**
+```mermaid
+stateDiagram-v2
+    [*] --> REQUESTED : POST /bookings/create
+    REQUESTED --> CONFIRMED : PATCH /{id}/confirm (Admin)
+    REQUESTED --> REJECTED : PATCH /{id}/reject (Admin + reason)
+    REQUESTED --> CANCELLED : POST /cancel/{id} (Owner or Admin)
+    CONFIRMED --> CANCELLED : POST /cancel/{id} (Owner or Admin)
+    REJECTED --> [*]
+    CANCELLED --> [*]
+
+    CONFIRMED : CONFIRMED\n● Sends WebSocket push\n● Fires BookingConfirmedEvent\n● Evicts Redis cache
+    REJECTED : REJECTED\n● Stores rejectionReason\n● Sends WebSocket push
+    CANCELLED : CANCELLED\n● Fires BookingCancelledEvent\n● Evicts Redis cache
+```
+
+---
+
+## Layer Responsibilities
+
+| Layer | Component | Responsibility |
+|-------|-----------|----------------|
+| **Filter** | `RateLimitingFilter` | Per-user/IP rate limits via Bucket4j (before security) |
+| **Filter** | `SecurityAuditFilter` | Logs `user`, `traceId`, `method`, `URI` on every authenticated request |
+| **Security** | `HotelSecurityConfig` | JWT resource-server, OAuth2 login (Keycloak + Google), `@PreAuthorize` |
+| **API** | Controllers | REST endpoints; delegate to services; annotated with `@AuditLogged` |
+| **AOP** | `AuditAspect` | Intercepts `@AuditLogged` methods, evaluates SpEL, writes audit log entry |
+| **Service** | `BookingService` | Booking state machine, pessimistic room locking, price calculation, metrics |
+| **Service** | `NotificationService` | `@Async` email notifications on booking lifecycle events |
+| **Metrics** | `BookingMetrics` | Micrometer counters + gauge for booking lifecycle events |
+| **Cache** | Redis | Room-availability lookups; `@CacheEvict` on every booking change |
+| **Persistence** | MySQL + Hibernate | All domain data; pessimistic locking on room rows during booking |
+| **Observability** | Micrometer + Zipkin | Distributed traces; custom booking counters; Actuator health/metrics |
+| **Events** | Spring App Events | `BookingConfirmedEvent`, `BookingCancelledEvent` → async notification listener |
+| **WebSocket** | STOMP/SockJS | Real-time push to `/topic/bookings/{hotelId}` on booking state changes |
+| **Test** | Testcontainers + MySQL | Real-DB integration tests in CI; `EndToEndWorkflowIntegrationTest` |
 
 ---
 
 ## Tech Stack
 
-- Java 17
-- Spring Boot 3.3
-- Spring Web
-- Spring Data JPA
-- Spring Security
-- Spring Validation
-- Spring OAuth2 Client
-- Spring OAuth2 Resource Server
-- Spring Cache
-- Spring Boot Actuator
-- Spring WebSocket
-- Micrometer Tracing (Brave bridge)
-- Zipkin Reporter
-- Thymeleaf
-- STOMP
-- SockJS
-- Redis
-- MySQL
-- Hibernate/JPA
-- Maven
-- Lombok
-- Springdoc OpenAPI (Swagger UI)
-- H2 (local test isolation)
-- GitHub Actions (CI)
+| Category | Technology |
+|----------|-----------|
+| **Runtime** | Java 17, Spring Boot 3.3.5 |
+| **Web** | Spring Web MVC, Spring WebSocket, STOMP, SockJS |
+| **Security** | Spring Security, OAuth2 Resource Server, OAuth2 Client (Keycloak, Google) |
+| **Data** | Spring Data JPA, Hibernate, MySQL 8, H2 (test) |
+| **Cache** | Spring Cache, Redis |
+| **Rate Limiting** | Bucket4j |
+| **Async** | Spring `@Async`, `@EnableAsync` |
+| **Observability** | Micrometer Tracing (Brave), Zipkin Reporter, Spring Boot Actuator |
+| **Metrics** | Micrometer (custom counters + gauges via `MeterRegistry`) |
+| **AOP** | Spring AOP (`@Aspect`, `@AfterReturning`), SpEL |
+| **Documentation** | Springdoc OpenAPI 3 (Swagger UI) |
+| **Build** | Maven, Maven Wrapper |
+| **Code Gen** | Lombok (`@Data`, `@Builder`, `@Slf4j`, etc.) |
+| **Testing** | JUnit 5, Mockito, Testcontainers (MySQL), `@SpringBootTest`, `@WebMvcTest` |
+| **CI** | GitHub Actions (ubuntu-latest, JDK 17 Temurin) |
+| **Templates** | Thymeleaf (login page), static HTML (ws-test.html) |
 
 ---
 
 ## Project Structure
 
 ```text
-hotel/
+hotel-management-api/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml                   ← GitHub Actions CI (push + PR)
+│       └── ci.yml                    ← GitHub Actions CI (push + PR to main)
 ├── scripts/
-│   └── load-test.sh                 ← Apache Bench load-test script
+│   └── load-test.sh                  ← Apache Bench load-test script
 ├── CHANGELOG.md
 ├── README.md
-├── docker-compose.yml               ← Zipkin container for local tracing
-├── docker-compose.override.yml.example
+├── docker-compose.yml                ← Zipkin + Redis local services
 ├── pom.xml
 ├── mvnw / mvnw.cmd
 └── src/
     ├── main/
     │   ├── java/com/cn/hotelDemo/
-    │   │   ├── config/              (HotelSecurityConfig, PasswordEncoderConfig, OpenApiConfig)
-    │   │   ├── controller/          (Hotel, Room, Booking, User, Audit, Login)
-    │   │   ├── dto/                 (@Valid-annotated HotelRequest, RoomRequest, BookingRequest)
-    │   │   ├── event/               (BookingConfirmedEvent, BookingCancelledEvent + listeners)
-    │   │   ├── exception/           (HotelNotFoundException, UserNotFoundException, ApiError, GlobalExceptionHandler)
-    │   │   ├── filter/              (SecurityAuditFilter — logs user + traceId on every request)
-    │   │   ├── model/               (Hotel, Room, User, Booking, AuditLog, BookingStatus)
-    │   │   ├── repository/
-    │   │   ├── service/
+    │   │   ├── annotation/           ← @AuditLogged (custom annotation)
+    │   │   ├── aspect/               ← AuditAspect (AOP + SpEL evaluation)
+    │   │   ├── config/               ← HotelSecurityConfig, PasswordEncoderConfig, OpenApiConfig, AsyncConfig
+    │   │   ├── controller/           ← Hotel, Room, Booking, User, Audit, Login
+    │   │   ├── dto/                  ← BookingRequest/Response, RejectionRequest, HotelRequest, RoomRequest, UserRequest
+    │   │   ├── event/                ← BookingConfirmedEvent, BookingCancelledEvent, NotificationListener (@Async)
+    │   │   ├── exception/            ← BookingNotFoundException, HotelNotFoundException, ApiError, GlobalExceptionHandler
+    │   │   ├── filter/               ← RateLimitingFilter (Bucket4j), SecurityAuditFilter
+    │   │   ├── metrics/              ← BookingMetrics (Micrometer counters + active-booking gauge)
+    │   │   ├── model/                ← Hotel, Room, User, Booking, AuditLog, BookingStatus, RoomStatus, RoomType
+    │   │   ├── repository/           ← JPA repositories (incl. pageable variants + pessimistic lock query)
+    │   │   ├── service/              ← BookingService, HotelService, RoomService, UserService, AuditService, NotificationService
     │   │   └── HotelDemoApplication.java
     │   └── resources/
-    │       ├── application.yml      (tracing, actuator, log pattern with traceId/spanId)
+    │       ├── application.yml       ← tracing, actuator, log pattern, async, cache config
     │       ├── static/
-    │       │   └── ws-test.html    (real-time booking notification demo page)
+    │       │   └── ws-test.html      ← real-time booking notification demo page
     │       └── templates/
     │           └── login.html
     └── test/
         ├── java/com/cn/hotelDemo/
-        │   ├── config/              (HotelSecurityConfigTest — @WebMvcTest security rules)
-        │   ├── controller/          (SecurityIntegrationTest — 6 security scenario tests)
-        │   ├── integration/         (BaseIntegrationTest, HotelIntegrationTest)
-        │   └── service/             (AuditServiceTest, BookingServiceTest, RoomServiceTest)
+        │   ├── config/               ← HotelSecurityConfigTest (@WebMvcTest security rules)
+        │   ├── controller/           ← SecurityIntegrationTest (6 security scenarios)
+        │   ├── integration/          ← BaseIntegrationTest, HotelIntegrationTest,
+        │   │                           BookingFlowIntegrationTest, EndToEndWorkflowIntegrationTest
+        │   └── service/              ← AuditServiceTest, BookingServiceTest, RoomServiceTest
         └── resources/
-            └── application.yml      (test datasource, cache=simple, security exclusions)
+            └── application.yml       ← test datasource, cache=simple, security exclusions
 ```
+
+---
+
+## Domain Model
+
+```mermaid
+erDiagram
+    HOTEL {
+        Long id PK
+        String name
+        Long rating
+        String city
+        Double discount
+        String address
+        String state
+        String country
+        String phoneNumber
+        String email
+        String website
+        String description
+        Integer totalRooms
+        String starCategory
+        LocalDateTime createdAt
+        LocalDateTime updatedAt
+    }
+
+    ROOM {
+        Long id PK
+        String roomNumber
+        RoomType roomType
+        Integer capacity
+        BigDecimal nightlyRate
+        RoomStatus status
+    }
+
+    BOOKING {
+        Long id PK
+        String bookingReference
+        LocalDate checkInDate
+        LocalDate checkOutDate
+        Integer guestCount
+        String specialRequests
+        BigDecimal totalPrice
+        BookingStatus status
+        String rejectionReason
+    }
+
+    USER {
+        Long id PK
+        String username
+        String password
+        String email
+        String role
+    }
+
+    AUDIT_LOG {
+        Long id PK
+        String action
+        String username
+        String resourceType
+        String resourceId
+        String outcome
+        String detail
+        LocalDateTime timestamp
+    }
+
+    HOTEL ||--o{ ROOM : "has"
+    HOTEL ||--o{ BOOKING : "receives"
+    ROOM ||--o{ BOOKING : "booked via"
+    USER ||--o{ BOOKING : "makes"
+```
+
+---
+
+## Authentication & Security Flow
+
+```mermaid
+flowchart LR
+    Browser["🌐 Browser / API Client"] --> RateLimitF["RateLimitingFilter\n(Bucket4j)"]
+    RateLimitF -->|within limit| Login["GET /login"]
+    RateLimitF -->|exceeded| HTTP429["429 Too Many Requests"]
+
+    Login --> Keycloak["Keycloak OIDC"]
+    Login --> Google["Google OIDC"]
+    Keycloak --> Token["JWT / OIDC claims"]
+    Google --> Token
+    Token --> Security["HotelSecurityConfig"]
+    Security --> AuditFilter["SecurityAuditFilter\n(logs user + traceId)"]
+    AuditFilter --> RoleMap["Role mapping\n(token + local user table)"]
+    RoleMap --> PreAuth["@PreAuthorize"]
+    PreAuth --> Endpoint["Controller endpoint"]
+    Endpoint --> AOP["@AuditLogged\n(AuditAspect → AuditService)"]
+    PreAuth -->|denied| ExHandler["GlobalExceptionHandler → ApiError 403"]
+```
+
+---
+
+## Booking Lifecycle Flow
+
+```mermaid
+flowchart TD
+    Guest["Authenticated User"] --> Create["POST /bookings/create"]
+    Admin["Admin"] --> Confirm["PATCH /{id}/confirm"]
+    Admin --> Reject["PATCH /{id}/reject + reason"]
+    UserOrAdmin["User or Admin"] --> Cancel["POST /cancel/{id}"]
+
+    Create --> RoomLock["Pessimistic room lock\n(SELECT ... FOR UPDATE)"]
+    RoomLock --> DateCheck["Date-range overlap check"]
+    DateCheck -->|no overlap| Requested["REQUESTED\n(totalPrice calculated)"]
+    DateCheck -->|conflict| AutoRej["REJECTED\n(overlap detected)"]
+    RoomLock -->|unavailable room| AutoRej2["REJECTED\n(room not AVAILABLE)"]
+
+    Requested --> Confirm
+    Requested --> Reject
+    Requested --> Cancel
+    Confirm --> Confirmed["CONFIRMED"]
+    Reject --> Rejected["REJECTED\n(+ rejectionReason stored)"]
+    Cancel -->|from REQUESTED| Cancelled["CANCELLED"]
+    Confirmed --> Cancel
+    Cancel -->|from CONFIRMED| Cancelled
+
+    Confirmed --> WsPush["📡 WebSocket push\n/topic/bookings/{hotelId}"]
+    Confirmed --> Event["BookingConfirmedEvent"]
+    Rejected --> WsPush
+    Cancelled --> Event2["BookingCancelledEvent"]
+    AutoRej --> WsPush
+
+    Event --> AsyncEmail["📧 Async Email Notification\n(@Async NotificationListener)"]
+    Event2 --> AsyncEmail
+
+    Confirmed --> CacheEvict["🗑 Evict Redis cache\n(roomAvailability)"]
+    Cancelled --> CacheEvict
+    Rejected --> CacheEvict
+
+    Confirmed --> Metrics["📊 BookingMetrics\nincrementConfirmed()"]
+    Cancelled --> MetricsC["📊 BookingMetrics\nincrementCancelled()"]
+    Rejected --> MetricsR["📊 BookingMetrics\nincrementRejected()"]
+```
+
+---
+
+## Rate Limiting
+
+The `RateLimitingFilter` runs before Spring Security (`@Order(HIGHEST_PRECEDENCE + 1)`) and enforces per-user/IP token-bucket limits via **Bucket4j**.
+
+| Endpoint | Identifier | Limit | Window |
+|----------|-----------|-------|--------|
+| `POST /hotel/bookings/create` | Authenticated username or IP | **20 requests** | per minute |
+| `POST /user/createUser` | Remote IP | **5 requests** | per hour |
+| `GET /hotel/rooms/hotel/{id}/available` | Authenticated username or IP | **60 requests** | per minute |
+
+**Response on breach:** `HTTP 429 Too Many Requests` with JSON body:
+```json
+{ "error": "Too many booking requests. Limit: 20 per minute." }
+```
+
+**Client resolution priority:** Authenticated username → `X-Forwarded-For` header → Remote IP.
+
+---
+
+## Custom Metrics (Micrometer)
+
+The `BookingMetrics` component registers the following meters with the Prometheus-compatible `MeterRegistry`:
+
+| Metric Name | Type | Description |
+|-------------|------|-------------|
+| `hotel.bookings.created` | Counter | Total bookings ever created |
+| `hotel.bookings.confirmed` | Counter | Total bookings confirmed by admin |
+| `hotel.bookings.rejected` | Counter | Total bookings rejected (auto + manual) |
+| `hotel.bookings.cancelled` | Counter | Total bookings cancelled |
+| `hotel.bookings.active` | Gauge | Currently active (non-terminal) bookings |
+
+**Query via Actuator:**
+```bash
+GET /actuator/metrics/hotel.bookings.confirmed
+GET /actuator/metrics/hotel.bookings.active
+```
+
+---
+
+## AOP Audit Logging
+
+Controllers are annotated with `@AuditLogged`, which triggers `AuditAspect` **after** a successful method return. SpEL expressions extract resource IDs from arguments or return values at runtime.
+
+```java
+// Example annotation usage
+@AuditLogged(
+    action = "#result != null ? 'BOOKING_' + #result.body.status.name() : 'UNKNOWN'",
+    resourceType = "BOOKING",
+    resourceIdSpel = "#result.body.bookingId"
+)
+```
+
+**Flow:**
+1. Controller method returns successfully
+2. `@AfterReturning` advice fires in `AuditAspect`
+3. SpEL is evaluated against method args + return value
+4. `AuditService.record(action, username, resourceType, resourceId, "SUCCESS", ...)` persists the log
+
+---
+
+## Asynchronous Notifications
+
+Booking lifecycle events are published via Spring's `ApplicationEventPublisher`. The `NotificationListener` processes them on a **separate thread pool** using `@Async`, completely decoupled from the booking transaction.
+
+```mermaid
+sequenceDiagram
+    participant BS as BookingService
+    participant EP as ApplicationEventPublisher
+    participant NL as NotificationListener (@Async)
+    participant Email as Email Provider (stub)
+
+    BS->>EP: publishEvent(BookingConfirmedEvent)
+    EP-->>BS: (returns immediately)
+    Note over BS: Transaction commits
+    EP->>NL: onBookingConfirmed() [async thread]
+    NL->>Email: send email to user
+```
+
+---
+
+## Pagination
+
+All collection endpoints support standard Spring Data pagination parameters:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `page` | `0` | Zero-based page index |
+| `size` | `20` | Items per page |
+| `sortBy` | `id` | Field to sort by |
+| `direction` | `asc` | `asc` or `desc` |
+
+**Example:**
+```bash
+GET /hotel/bookings/getAll?page=0&size=10&sortBy=checkInDate&direction=desc
+GET /hotel/bookings/user/1?page=1&size=5
+GET /hotel/bookings/hotel/2?page=0&size=20&sortBy=totalPrice&direction=desc
+```
+
+Response is a Spring `Page<T>` with `content`, `totalElements`, `totalPages`, `number`, `size` fields.
 
 ---
 
 ## Environment Configuration
 
-The application uses environment variables for sensitive or environment-specific settings. Create a `.env` file in the project root (or copy `docker-compose.override.yml.example` to `docker-compose.override.yml` if using Docker Compose) and configure these variables:
+Create a `.env` file in the project root and configure these variables:
 
 | Variable | Description | Default |
-| --- | --- | --- |
+|----------|-------------|---------|
 | `DB_URL` | Full MySQL JDBC connection URL | — |
 | `DB_USERNAME` | MySQL username | `demouser` |
 | `DB_PASSWORD` | MySQL database password | — |
@@ -180,38 +479,38 @@ See [.env.example](.env.example) and [docker-compose.override.yml.example](docke
 
 ### Local Development
 
-1. Open a terminal in the project root.
-2. Copy `.env.example` to `.env` and configure your credentials and connection strings.
-3. Start MySQL and Redis (or use Docker Compose).
-4. *(Optional)* Start Zipkin for distributed tracing:
+1. Clone the repository and open a terminal at the project root.
+2. Copy `.env.example` to `.env` and configure your credentials.
+3. Start MySQL and Redis (or use Docker Compose):
    ```bash
-   docker-compose up -d zipkin
-   # Zipkin UI available at http://localhost:9411
+   docker-compose up -d redis zipkin
    ```
-5. Run the application:
+4. Run the application:
    ```bash
    mvn spring-boot:run
    ```
-6. Open `http://localhost:8082/login` for the custom login page.
-7. Browse API docs at `http://localhost:8082/swagger-ui.html`.
-8. View metrics at `http://localhost:8082/actuator/metrics`.
-9. Open `http://localhost:8082/ws-test.html` to subscribe to booking notifications for a hotel ID.
+5. Open `http://localhost:8082/login` for the custom login page.
+6. Browse API docs at `http://localhost:8082/swagger-ui.html`.
+7. View metrics at `http://localhost:8082/actuator/metrics`.
+8. Open `http://localhost:8082/ws-test.html` to subscribe to real-time booking notifications.
+9. *(Optional)* View distributed traces at `http://localhost:9411`.
 
 ### Running Tests
 
 ```bash
-# Full test suite — uses H2 in-memory DB and in-memory cache (no Docker needed locally)
+# Full test suite — uses Testcontainers MySQL in CI, H2 locally (no Docker needed for local)
 mvn test
 
-# Run a specific integration test only
-mvn test -Dtest=HotelIntegrationTest
+# Run a specific test class
+mvn test -Dtest=EndToEndWorkflowIntegrationTest
+mvn test -Dtest=BookingFlowIntegrationTest
 mvn test -Dtest=SecurityIntegrationTest
 ```
 
 ### Load Testing
 
 ```bash
-# Requires Apache Bench (ab) to be installed
+# Requires Apache Bench (ab)
 bash scripts/load-test.sh
 ```
 
@@ -221,18 +520,20 @@ bash scripts/load-test.sh
 
 ### Hotel
 
-| Method | Path | Access |
-| --- | --- | --- |
-| `POST` | `/hotel/create` | ADMIN |
-| `GET` | `/hotel/getAll` | ADMIN |
-| `GET` | `/hotel/id/{id}` | NORMAL, ADMIN |
-| `DELETE` | `/hotel/remove/id/{id}` | ADMIN |
-| `GET` | `/hotel/userDetail` | Authenticated (OIDC principal) |
+| Method | Path | Access | New in Upgrade |
+|--------|------|--------|---------------|
+| `POST` | `/hotel/create` | ADMIN | — |
+| `GET` | `/hotel/getAll` | ADMIN | — |
+| `GET` | `/hotel/id/{id}` | NORMAL, ADMIN | — |
+| `PUT` | `/hotel/update/{id}` | ADMIN | ✅ Hotel update endpoint |
+| `DELETE` | `/hotel/remove/id/{id}` | ADMIN | — |
+| `GET` | `/hotel/search?city=&name=` | ADMIN | ✅ Search by city/name |
+| `GET` | `/hotel/userDetail` | Authenticated (OIDC) | — |
 
 ### Room
 
 | Method | Path | Access |
-| --- | --- | --- |
+|--------|------|--------|
 | `POST` | `/hotel/rooms/create` | ADMIN |
 | `GET` | `/hotel/rooms/getAll` | ADMIN |
 | `GET` | `/hotel/rooms/id/{id}` | ADMIN |
@@ -241,29 +542,27 @@ bash scripts/load-test.sh
 
 ### Booking
 
-| Method | Path | Access |
-| --- | --- | --- |
-| `POST` | `/hotel/bookings/create` | Authenticated |
-| `POST` | `/hotel/bookings/cancel/{id}` | Owner or ADMIN |
-| `GET` | `/hotel/bookings/id/{id}` | Authenticated |
-| `GET` | `/hotel/bookings/getAll` | ADMIN |
-| `GET` | `/hotel/bookings/user/{userId}` | Authenticated |
-| `GET` | `/hotel/bookings/hotel/{hotelId}` | ADMIN |
+| Method | Path | Access | New in Upgrade |
+|--------|------|--------|---------------|
+| `POST` | `/hotel/bookings/create` | Authenticated | — |
+| `GET` | `/hotel/bookings/id/{id}` | Authenticated | — |
+| `GET` | `/hotel/bookings/getAll?page=&size=&sortBy=&direction=` | ADMIN | ✅ Paginated |
+| `GET` | `/hotel/bookings/user/{userId}?page=&size=` | Authenticated | ✅ Paginated |
+| `GET` | `/hotel/bookings/hotel/{hotelId}?page=&size=` | ADMIN | ✅ Paginated |
+| `PATCH` | `/hotel/bookings/{id}/confirm` | ADMIN | ✅ Approval workflow |
+| `PATCH` | `/hotel/bookings/{id}/reject` | ADMIN | ✅ Rejection with reason |
+| `POST` | `/hotel/bookings/cancel/{id}` | Owner or ADMIN | — |
 
 ### User & Audit
 
 | Method | Path | Access |
-| --- | --- | --- |
-| `POST` | `/user/createUser` | Public |
+|--------|------|--------|
+| `POST` | `/user/createUser` | Public (rate-limited: 5/hr) |
 | `GET` | `/user/getUsers` | ADMIN |
 | `GET` | `/user/getUsers/{id}` | ADMIN |
 | `DELETE` | `/user/remove/id/{id}` | ADMIN |
 | `GET` | `/audit/getAll` | ADMIN |
 | `GET` | `/login` | Public |
-
-## Real-time notifications
-
-After making a booking, all clients subscribed to `/topic/bookings/{hotelId}` receive a push notification. Test at `/ws-test.html`.
 
 ---
 
@@ -279,13 +578,22 @@ After making a booking, all clients subscribed to `/topic/bookings/{hotelId}` re
 }
 ```
 
-**Hotel creation (with validation & discount):**
+**Hotel creation (with enriched metadata):**
 ```json
 {
   "name": "Sea View Inn",
   "rating": 4,
   "city": "Goa",
-  "discount": 15.0
+  "discount": 15.0,
+  "address": "Beach Road, Calangute",
+  "state": "Goa",
+  "country": "India",
+  "phoneNumber": "+91-9876543210",
+  "email": "info@seaviewinn.com",
+  "website": "https://seaviewinn.com",
+  "description": "Luxury beachfront hotel with stunning ocean views.",
+  "totalRooms": 50,
+  "starCategory": "4-Star"
 }
 ```
 
@@ -294,19 +602,14 @@ After making a booking, all clients subscribed to `/topic/bookings/{hotelId}` re
 {
   "hotelId": 1,
   "roomNumber": "101",
-  "roomType": "Deluxe",
+  "roomType": "DELUXE",
   "capacity": 2,
   "nightlyRate": 4500.00,
   "status": "AVAILABLE"
 }
 ```
 
-**Room availability check:**
-```
-GET /hotel/rooms/hotel/1/available?checkInDate=2026-06-05&checkOutDate=2026-06-08
-```
-
-**Booking creation:**
+**Booking creation (starts in REQUESTED state):**
 ```json
 {
   "hotelId": 1,
@@ -315,18 +618,45 @@ GET /hotel/rooms/hotel/1/available?checkInDate=2026-06-05&checkOutDate=2026-06-0
   "checkInDate": "2026-06-05",
   "checkOutDate": "2026-06-08",
   "guestCount": 2,
-  "specialRequests": "Late check-in"
+  "specialRequests": "Late check-in, king bed preferred"
 }
 ```
 
-**Booking response (includes total price):**
+**Booking creation response (REQUESTED):**
+```json
+{
+  "bookingReference": "BOOK-1A2B3C4D",
+  "status": "REQUESTED",
+  "message": "Booking requested, awaiting confirmation",
+  "bookingId": 10,
+  "totalPrice": 11475.00
+}
+```
+
+**Admin confirms booking — `PATCH /hotel/bookings/10/confirm`:**
 ```json
 {
   "bookingReference": "BOOK-1A2B3C4D",
   "status": "CONFIRMED",
-  "message": "Booking confirmed successfully",
+  "message": "Booking confirmed by admin",
   "bookingId": 10,
-  "totalPrice": 13500.00
+  "totalPrice": 11475.00
+}
+```
+
+**Admin rejects booking — `PATCH /hotel/bookings/10/reject`:**
+```json
+{ "reason": "Room under maintenance during requested dates." }
+```
+
+**Rejection response:**
+```json
+{
+  "bookingReference": "BOOK-1A2B3C4D",
+  "status": "REJECTED",
+  "message": "Booking rejected: Room under maintenance during requested dates.",
+  "bookingId": 10,
+  "totalPrice": null
 }
 ```
 
@@ -336,154 +666,163 @@ GET /hotel/rooms/hotel/1/available?checkInDate=2026-06-05&checkOutDate=2026-06-0
   "status": 400,
   "message": "Validation failed",
   "errors": {
-    "name": "Hotel name is required",
-    "rating": "Rating must be at least 1"
+    "checkOutDate": "must be a date in the present or in the future",
+    "guestCount": "must be greater than or equal to 1"
   }
 }
 ```
 
----
-
-## Authentication Flow
-
-```mermaid
-flowchart LR
-    Browser["🌐 Browser"] --> Login["GET /login"]
-    Login --> Keycloak["Keycloak OIDC"]
-    Login --> Google["Google OIDC"]
-    Keycloak --> Token["JWT / OIDC claims"]
-    Google --> Token
-    Token --> Security["HotelSecurityConfig"]
-    Security --> AuditFilter["SecurityAuditFilter\n(logs user + traceId)"]
-    AuditFilter --> RoleMap["Role mapping\n(token + local user table)"]
-    RoleMap --> PreAuth["@PreAuthorize"]
-    PreAuth --> Endpoint["Controller endpoint"]
-    Endpoint --> Audit["Audit log entry"]
-    PreAuth -->|denied| ExHandler["GlobalExceptionHandler → ApiError 403"]
+**Rate limit exceeded (429):**
+```json
+{ "error": "Too many booking requests. Limit: 20 per minute." }
 ```
 
 ---
 
-## Booking Flow
+## Price Calculation
 
-```mermaid
-flowchart LR
-    Guest["Authenticated Guest"] --> Create["POST /bookings/create"]
-    Guest --> Cancel["POST /bookings/cancel/{id}"]
+Total price is calculated at booking creation time:
 
-    Create --> RoomLock["Pessimistic room lock"]
-    RoomLock --> Overlap["Date-range overlap check"]
-    Overlap -->|available| Confirmed["CONFIRMED\n(totalPrice calculated)"]
-    Overlap -->|conflict| Rejected["REJECTED"]
-
-    Cancel --> StateCheck["Status transition check\nCONFIRMED only"]
-    StateCheck -->|valid| Cancelled["CANCELLED"]
-    StateCheck -->|invalid| Error["400 ApiError JSON"]
-
-    Confirmed --> Event["BookingConfirmedEvent\n(Spring Application Event)"]
-    Cancelled --> CancelEvent["BookingCancelledEvent"]
-    Event --> Notification["Notification listener\n(email stub log)"]
-    CancelEvent --> Notification
-
-    Confirmed --> CacheEvict["Evict room-availability cache"]
-    Confirmed --> WsPush["WebSocket push notification\n/topic/bookings/{hotelId}"]
-    Rejected --> CacheEvict
-    Rejected --> WsPush
-    Cancelled --> CacheEvict
-
-    Confirmed --> AuditLog["Audit log"]
-    Rejected --> AuditLog
-    Cancelled --> AuditLog
 ```
+totalPrice = nightlyRate × nights × (1 - discount/100)
+```
+
+| Input | Example |
+|-------|---------|
+| Nightly rate | ₹4,500 |
+| Nights | 3 (Jun 5 → Jun 8) |
+| Hotel discount | 15% |
+| **Total** | **₹11,475.00** |
+
+If the hotel has no discount set (`discount = 0`), the full rate applies. Price is stored in `Booking.totalPrice` as `BigDecimal` (2 decimal places, `HALF_UP` rounding).
 
 ---
 
-## System Flow
+## Real-Time Notifications (WebSocket)
 
-```mermaid
-flowchart LR
-    Client["Client / Swagger UI"] --> Security["Spring Security\n+ SecurityAuditFilter"]
-    Security --> UserAPI["/user/*"]
-    Security --> HotelAPI["/hotel/*"]
-    Security --> AuditAPI["/audit/*"]
-    Security --> SwaggerUI["/swagger-ui.html"]
-    Security --> Actuator["/actuator/*"]
+After any booking state change, all clients subscribed to `/topic/bookings/{hotelId}` receive a push notification via STOMP over SockJS.
 
-    HotelAPI --> Hotels["Hotel CRUD"]
-    HotelAPI --> Rooms["Room inventory"]
-    HotelAPI --> Bookings["Booking lifecycle"]
-
-    Rooms --> Cache["Redis cache"]
-    Rooms --> LockedRoom["Pessimistic lock"]
-    LockedRoom --> Availability["Date-range check"]
-    Availability --> Cache
-
-    Bookings --> Events["Spring Application Events"]
-    Events --> NotifyStub["Email Notification Stub"]
-
-    Bookings --> AuditTrail["Audit trail"]
-    Hotels --> AuditTrail
-
-    Hotels -.->|missing ID| CustomEx["HotelNotFoundException"]
-    CustomEx -.-> ExHandler
-    Security -.->|error| ExHandler["GlobalExceptionHandler"]
-    ExHandler --> ErrorJSON["ApiError JSON response"]
-
-    Actuator --> Metrics["Micrometer Metrics"]
-    Metrics --> Zipkin["Zipkin Tracing UI\n:9411"]
-
-    CI["GitHub Actions CI"] --> Tests["Integration suite — all green"]
+**Notification payload:**
+```json
+{
+  "bookingReference": "BOOK-1A2B3C4D",
+  "status": "CONFIRMED",
+  "message": "Booking confirmed by admin",
+  "hotelId": 1,
+  "roomId": 3
+}
 ```
+
+Test at `http://localhost:8082/ws-test.html` — enter a hotel ID and subscribe.
 
 ---
 
-## Observability (Phase 3)
+## Observability
 
-The application ships with a full observability stack:
+```mermaid
+flowchart LR
+    Request["Incoming HTTP Request"] --> Brave["Micrometer Tracing\n(Brave bridge)"]
+    Brave --> TraceId["traceId + spanId injected\ninto MDC"]
+    TraceId --> LogPattern["Log Pattern:\n[traceId-spanId] class : message"]
+    TraceId --> Zipkin["Zipkin UI\nlocalhost:9411"]
+
+    BookingService --> BM["BookingMetrics\n(MeterRegistry)"]
+    BM --> Actuator["GET /actuator/metrics\n/hotel.bookings.*"]
+    Actuator --> Prometheus["Prometheus scrape\n(ready)"]
+```
 
 | Component | Detail |
-| --- | --- |
-| **Micrometer Tracing** | Brave bridge — instruments every HTTP request with a `traceId` and `spanId` |
-| **Zipkin** | Span collector and UI at `http://localhost:9411` (Docker Compose service) |
-| **Correlation IDs** | Every log line includes `[traceId-spanId]` for cross-log correlation |
-| **Actuator metrics** | `GET /actuator/metrics` — JVM, HTTP, datasource, cache pool metrics |
+|-----------|--------|
+| **Micrometer Tracing** | Brave bridge — instruments every HTTP request with `traceId` and `spanId` |
+| **Zipkin** | Span collector and UI at `http://localhost:9411` (Docker Compose) |
+| **MDC Correlation IDs** | Every log line includes `[traceId-spanId]` for cross-log correlation |
+| **Booking MDC** | `userId`, `hotelId`, `bookingRef` added to MDC within `BookingService` for per-request traceability |
+| **Custom Metrics** | `hotel.bookings.*` counters + active gauge via `BookingMetrics` |
+| **Actuator metrics** | `GET /actuator/metrics` — JVM, HTTP, datasource, cache, booking-specific metrics |
 | **Actuator health** | `GET /actuator/health` — DB, Redis, and disk-space liveness |
 | **SecurityAuditFilter** | Logs `user`, `authorities`, `method`, `URI`, `traceId` on every authenticated request |
 
 **Example log line with correlation IDs:**
 ```
 INFO [6a5346b258484bc2-c24080ee3168f33d] c.c.h.filter.SecurityAuditFilter :
-  SECURITY_AUDIT: User 'admin' with authorities '[ROLE_ADMIN]' accessed GET /hotel/getAll
+  SECURITY_AUDIT: User 'admin' with authorities '[ROLE_ADMIN]' accessed PATCH /hotel/bookings/10/confirm
 ```
-
-Start Zipkin locally: `docker-compose up -d zipkin` → browse `http://localhost:9411`
 
 ---
 
-## Integration Test Suite (Phase 3)
+## Integration Test Suite
 
-The project ships a **multi-class test suite** across 7 test classes, all green on GitHub Actions CI (`ubuntu-latest`, JDK 17).
+The project ships a **multi-class test suite** across 8 test classes, all green on GitHub Actions CI (`ubuntu-latest`, JDK 17).
 
-| Test Class | Strategy | What it verifies |
-| --- | --- | --- |
-| `HotelIntegrationTest` | `@SpringBootTest` + shared Spring context + `@WithMockUser(ADMIN)` + CSRF | Full DB round-trip: POST hotel → assert saved in H2 |
-| `SecurityIntegrationTest` | `@SpringBootTest` + shared Spring context | 6 security scenarios: 401, 200 public, NORMAL→403, ADMIN→200, NORMAL→404 (no data leakage) |
+| Test Class | Strategy | Coverage |
+|------------|----------|----------|
+| `EndToEndWorkflowIntegrationTest` | `@SpringBootTest` + `@Testcontainers` + MySQLContainer | Full lifecycle: User → Hotel → Room → Booking (REQUESTED → CONFIRMED → CANCELLED) + Metrics + Audit |
+| `BookingFlowIntegrationTest` | `@SpringBootTest` + `@Testcontainers` + MySQLContainer | Booking happy path with WebSocket notification and audit log verification |
+| `HotelIntegrationTest` | `@SpringBootTest` + shared Spring context + `@WithMockUser(ADMIN)` | Full DB round-trip: POST hotel → assert persisted |
+| `SecurityIntegrationTest` | `@SpringBootTest` + shared Spring context | 6 security scenarios: 401, 200 public, NORMAL→403, ADMIN→200 |
 | `HotelSecurityConfigTest` | `@WebMvcTest` + `@Import(HotelSecurityConfig)` | Security rule assertions at the filter chain level |
-| `BookingServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Booking business logic: confirmed, rejected, invalid cancel |
-| `BookingFlowIntegrationTest` | `@SpringBootTest` + `@Testcontainers` + MySQLContainer | End-to-end booking happy path with persisted booking, audit log, and WebSocket notification |
-| `RoomServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Availability lookup and cache interaction |
-| `AuditServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Audit log entry creation |
+| `BookingServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Booking state machine: confirmed, rejected, invalid cancel transitions |
+| `RoomServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Availability lookup and Redis cache interaction |
+| `AuditServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Audit log entry creation and persistence |
 
 ### Test Design Decisions
 
-- **Shared Spring context**: `HotelIntegrationTest` and `SecurityIntegrationTest` are annotated identically (`app.security.enabled=true`, same property set), allowing Spring's context cache to reuse a single `ApplicationContext` across both classes — dramatically reducing test startup time.
-- **`@BeforeEach` database cleanup**: Both integration test classes call `hotelRepository.deleteAll()` before each test to prevent test pollution (one test's created data from leaking into the next test's expectations).
-- **CSRF handling**: `MockMvc` POST requests in tests that have security enabled include `.with(csrf())` to pass Spring Security's CSRF protection, matching the behaviour of real browser clients.
-- **`@MockBean ClientRegistrationRepository`**: Prevents the OAuth2 Client auto-configuration from failing when Keycloak/Google credentials are not present in the CI environment.
+- **Testcontainers MySQL** — `BookingFlowIntegrationTest` and `EndToEndWorkflowIntegrationTest` spin up a real MySQL container for production-parity testing.
+- **CI driver fix** — Explicitly registers `com.mysql.cj.jdbc.Driver` in `BaseIntegrationTest` to prevent a Testcontainers↔Spring Boot driver-class clash when no `spring.datasource.driver-class-name` is set.
+- **Shared Spring context** — `HotelIntegrationTest` and `SecurityIntegrationTest` share a single `ApplicationContext` to reduce test startup overhead.
+- **`@BeforeEach` cleanup** — All integration tests call `repository.deleteAll()` before each test to prevent data leakage.
+- **CSRF handling** — `MockMvc` POST requests include `.with(csrf())` to match real browser behavior.
+- **`@MockBean ClientRegistrationRepository`** — Prevents OAuth2 Client auto-configuration from failing when Keycloak/Google credentials are absent in CI.
 
 ---
 
-## Cross-Service Integration (Phase 3)
+## CI Pipeline
+
+The GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push and pull request to `main`:
+
+```mermaid
+flowchart LR
+    Push["Git Push / PR"] --> Checkout["actions/checkout@v4"]
+    Checkout --> JDK["Setup JDK 17\n(Temurin + Maven cache)"]
+    JDK --> Test["mvn clean test"]
+    Test --> Report["Test report\n(all green ✅)"]
+
+    subgraph Test Suite
+        Unit["Unit Tests\n(Mockito)"]
+        SliceTest["Slice Tests\n(@WebMvcTest)"]
+        IT["Integration Tests\n(H2 + Testcontainers MySQL)"]
+    end
+
+    Test --> Unit & SliceTest & IT
+```
+
+The test suite is designed to run **without any external infrastructure** in CI:
+- `@SpringBootTest` tests with H2 replace MySQL for lightweight context tests
+- Testcontainers spins up a real MySQL container for `BookingFlowIntegrationTest` and `EndToEndWorkflowIntegrationTest`
+- `spring.cache.type=simple` replaces Redis
+- `@MockBean ClientRegistrationRepository` eliminates OAuth2 client startup calls
+- No Keycloak or Google OIDC credentials required
+
+---
+
+## Performance Baseline
+
+We use Apache Bench (`ab`) via `scripts/load-test.sh` to measure the impact of Redis caching on the room availability endpoint.
+
+**Test Configuration:** 1000 requests, 100 concurrency (`ab -n 1000 -c 100`)
+
+| Metric | Without Redis Cache (MySQL only) | With Redis Cache (Hot path) |
+|--------|----------------------------------|-----------------------------|
+| **TPS (req/sec)** | ~180 req/sec | ~1,200 req/sec |
+| **P50 Latency** | 350 ms | 12 ms |
+| **P95 Latency** | 520 ms | 28 ms |
+| **P99 Latency** | 850 ms | 45 ms |
+
+> **Key insight:** Redis caching reduces P99 latency by ~95% on the `GET /hotel/rooms/hotel/{id}/available` endpoint by eliminating repeated MySQL queries for the same date-range availability window.
+
+---
+
+## Cross-Service Integration (Roadmap)
 
 ```mermaid
 flowchart TB
@@ -517,40 +856,7 @@ flowchart TB
 
 ---
 
-## Performance Baseline (Phase 3)
-
-We use Apache Bench (`ab`) via `scripts/load-test.sh` to measure the API's performance, specifically testing the impact of Redis caching on the room availability endpoint.
-
-**Test Configuration:** 1000 requests, 100 concurrency (`ab -n 1000 -c 100`)
-
-| Metric | Without Redis Cache (MySQL only) | With Redis Cache (Hot path) |
-| --- | --- | --- |
-| **TPS (req/sec)** | ~180 req/sec | ~1,200 req/sec |
-| **P50 Latency** | 350 ms | 12 ms |
-| **P95 Latency** | 520 ms | 28 ms |
-| **P99 Latency** | 850 ms | 45 ms |
-
-> **Key insight:** Redis caching reduces P99 latency by ~95% on the `GET /hotel/rooms/hotel/{id}/available` endpoint by eliminating repeated MySQL queries for the same date-range availability window.
-
----
-
-## CI Pipeline
-
-The GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push and pull request against `main`:
-
-1. **Checkout** code (`actions/checkout@v4`)
-2. **Set up JDK 17** with Temurin distribution and Maven cache
-3. **`mvn clean test`** — runs all 17 tests
-
-The test suite is designed to run **without any external infrastructure** in CI:
-- H2 in-memory database replaces MySQL (via `src/test/resources/application.yml`)
-- `spring.cache.type=simple` replaces Redis
-- `@MockBean ClientRegistrationRepository` eliminates OAuth2 client startup calls
-- No Keycloak or Google OIDC credentials required
-
----
-
 ## GitHub Metadata
 
-- **Repository description:** `Spring Boot REST API for hotel, room, booking, and audit-log management with MySQL, Redis caching, JWT/OAuth2 auth, Swagger/OpenAPI 3 docs, distributed tracing (Micrometer/Zipkin), a 17-test green CI suite, and Spring Events-driven notifications.`
-- **Topics:** `java`, `java-17`, `spring-boot`, `spring-boot-3`, `spring-security`, `spring-security-test`, `spring-data-jpa`, `spring-validation`, `spring-cache`, `redis`, `mysql`, `h2-database`, `rest-api`, `hotel-management`, `room-booking`, `room-availability`, `cache-invalidation`, `audit-log`, `observability`, `micrometer`, `zipkin`, `distributed-tracing`, `concurrency`, `pessimistic-locking`, `jwt`, `oauth2`, `keycloak`, `google-login`, `thymeleaf`, `swagger`, `openapi`, `springdoc`, `github-actions`, `ci-cd`, `maven`, `testcontainers`, `learning-project`, `portfolio-project`
+- **Repository description:** `Production-grade Spring Boot REST API for hotel/room/booking management — featuring a 4-state booking approval workflow, Bucket4j rate limiting, async email notifications, custom Micrometer metrics, AOP audit logging, paginated endpoints, Redis caching, JWT/OAuth2, WebSocket push notifications, Swagger/OpenAPI 3, Testcontainers integration tests, and a fully green GitHub Actions CI pipeline.`
+- **Topics:** `java`, `java-17`, `spring-boot`, `spring-boot-3`, `spring-security`, `spring-data-jpa`, `spring-validation`, `spring-cache`, `spring-aop`, `spring-events`, `spring-async`, `redis`, `mysql`, `h2-database`, `rest-api`, `hotel-management`, `room-booking`, `booking-workflow`, `state-machine`, `rate-limiting`, `bucket4j`, `pagination`, `micrometer`, `custom-metrics`, `zipkin`, `distributed-tracing`, `concurrency`, `pessimistic-locking`, `jwt`, `oauth2`, `keycloak`, `google-login`, `thymeleaf`, `swagger`, `openapi`, `springdoc`, `lombok`, `testcontainers`, `github-actions`, `ci-cd`, `maven`, `portfolio-project`
