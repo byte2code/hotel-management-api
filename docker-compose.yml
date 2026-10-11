@@ -8,3 +8,19 @@ services:
       - "9411:9411"
     environment:
       - STORAGE_TYPE=mem
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: hotel-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: hotel-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
