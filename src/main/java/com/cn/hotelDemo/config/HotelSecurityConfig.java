@@ -41,12 +41,20 @@ import com.nimbusds.jose.shaded.gson.internal.LinkedTreeMap;
 public class HotelSecurityConfig {
 
 	public final String GOOGLE_ISSUER_URI = "accounts.google.com";
-	private UserRepository userRepository;
-	private SecurityAuditFilter securityAuditFilter;
+	private final UserRepository userRepository;
+	private final SecurityAuditFilter securityAuditFilter;
+	private com.cn.hotelDemo.filter.RateLimitingFilter rateLimitingFilter;
 
-	public HotelSecurityConfig(UserRepository userRepository, SecurityAuditFilter securityAuditFilter){
+	@org.springframework.beans.factory.annotation.Autowired
+	public HotelSecurityConfig(UserRepository userRepository, SecurityAuditFilter securityAuditFilter,
+			@org.springframework.beans.factory.annotation.Autowired(required = false) com.cn.hotelDemo.filter.RateLimitingFilter rateLimitingFilter) {
 		this.userRepository = userRepository;
 		this.securityAuditFilter = securityAuditFilter;
+		this.rateLimitingFilter = rateLimitingFilter;
+	}
+
+	public HotelSecurityConfig(UserRepository userRepository, SecurityAuditFilter securityAuditFilter) {
+		this(userRepository, securityAuditFilter, null);
 	}
 
 	@Bean
@@ -70,6 +78,9 @@ public class HotelSecurityConfig {
 							)
 					);
 		
+		if (rateLimitingFilter != null) {
+			http.addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
+		}
 		http.addFilterAfter(securityAuditFilter, UsernamePasswordAuthenticationFilter.class);
 		return http.build();
 	}
