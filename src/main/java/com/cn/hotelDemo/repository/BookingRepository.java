@@ -11,8 +11,10 @@ import com.cn.hotelDemo.model.BookingStatus;
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
 	List<Booking> findByUserId(Long userId);
+	org.springframework.data.domain.Page<Booking> findByUserId(Long userId, org.springframework.data.domain.Pageable pageable);
 
 	List<Booking> findByHotelId(Long hotelId);
+	org.springframework.data.domain.Page<Booking> findByHotelId(Long hotelId, org.springframework.data.domain.Pageable pageable);
 
 	List<Booking> findByRoomIdAndStatusIn(Long roomId, Collection<BookingStatus> statuses);
 

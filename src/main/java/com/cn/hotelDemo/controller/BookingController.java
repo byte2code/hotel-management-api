@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,6 +17,7 @@ import org.springframework.security.access.AccessDeniedException;
 
 import com.cn.hotelDemo.dto.BookingRequest;
 import com.cn.hotelDemo.dto.BookingResponse;
+import com.cn.hotelDemo.dto.RejectionRequest;
 import com.cn.hotelDemo.model.Booking;
 import com.cn.hotelDemo.model.BookingStatus;
 import com.cn.hotelDemo.annotation.AuditLogged;
@@ -45,7 +47,8 @@ public class BookingController {
 			Authentication authentication) {
 		BookingResponse response = bookingService.createBooking(bookingRequest);
 		return new ResponseEntity<>(response,
-				response.getStatus() == BookingStatus.CONFIRMED ? HttpStatus.CREATED : HttpStatus.CONFLICT);
+				(response.getStatus() == BookingStatus.CONFIRMED || response.getStatus() == BookingStatus.REQUESTED)
+						? HttpStatus.CREATED : HttpStatus.CONFLICT);
 	}
 
 	@GetMapping("/id/{id}")
@@ -58,23 +61,67 @@ public class BookingController {
 
 	@GetMapping("/getAll")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
-	@Operation(summary = "Get all bookings (Admin only)")
-	public ResponseEntity<List<Booking>> getAllBookings() {
-		return ResponseEntity.ok(bookingService.getAllBookings());
+	@Operation(summary = "Get all bookings with pagination (Admin only)")
+	public ResponseEntity<org.springframework.data.domain.Page<Booking>> getAllBookings(
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "id") String sortBy,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "asc") String direction) {
+		org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase("desc")
+				? org.springframework.data.domain.Sort.by(sortBy).descending()
+				: org.springframework.data.domain.Sort.by(sortBy).ascending();
+		org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
+		return ResponseEntity.ok(bookingService.getAllBookings(pageable));
 	}
 
 	@GetMapping("/user/{userId}")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
-	@Operation(summary = "Get bookings by user ID")
-	public ResponseEntity<List<Booking>> getBookingsByUser(@PathVariable Long userId) {
-		return ResponseEntity.ok(bookingService.getBookingsByUserId(userId));
+	@Operation(summary = "Get bookings by user ID with pagination")
+	public ResponseEntity<org.springframework.data.domain.Page<Booking>> getBookingsByUser(
+			@PathVariable Long userId,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "id") String sortBy,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "asc") String direction) {
+		org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase("desc")
+				? org.springframework.data.domain.Sort.by(sortBy).descending()
+				: org.springframework.data.domain.Sort.by(sortBy).ascending();
+		org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
+		return ResponseEntity.ok(bookingService.getBookingsByUserId(userId, pageable));
 	}
 
 	@GetMapping("/hotel/{hotelId}")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
-	@Operation(summary = "Get bookings by hotel ID")
-	public ResponseEntity<List<Booking>> getBookingsByHotel(@PathVariable Long hotelId) {
-		return ResponseEntity.ok(bookingService.getBookingsByHotelId(hotelId));
+	@Operation(summary = "Get bookings by hotel ID with pagination")
+	public ResponseEntity<org.springframework.data.domain.Page<Booking>> getBookingsByHotel(
+			@PathVariable Long hotelId,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "id") String sortBy,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "asc") String direction) {
+		org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase("desc")
+				? org.springframework.data.domain.Sort.by(sortBy).descending()
+				: org.springframework.data.domain.Sort.by(sortBy).ascending();
+		org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
+		return ResponseEntity.ok(bookingService.getBookingsByHotelId(hotelId, pageable));
+	}
+
+	@PatchMapping("/{id}/confirm")
+	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
+	@Operation(summary = "Admin confirms a REQUESTED booking")
+	@AuditLogged(action = "BOOKING_CONFIRMED", resourceType = "BOOKING", resourceIdSpel = "#result.body.bookingId")
+	public ResponseEntity<BookingResponse> confirmBooking(@PathVariable Long id) {
+		return ResponseEntity.ok(bookingService.confirmBooking(id));
+	}
+
+	@PatchMapping("/{id}/reject")
+	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
+	@Operation(summary = "Admin rejects a REQUESTED booking with a reason")
+	@AuditLogged(action = "BOOKING_REJECTED", resourceType = "BOOKING", resourceIdSpel = "#result.body.bookingId")
+	public ResponseEntity<BookingResponse> rejectBooking(
+			@PathVariable Long id,
+			@Valid @RequestBody RejectionRequest request) {
+		return ResponseEntity.ok(bookingService.rejectBooking(id, request.getReason()));
 	}
 
 	@PostMapping("/cancel/{id}")
