@@ -25,18 +25,22 @@ public class UserService {
         return userRepository.findAll();
     }
 
+    public org.springframework.data.domain.Page<User> getUsers(org.springframework.data.domain.Pageable pageable) {
+        return userRepository.findAll(pageable);
+    }
+
     public User getUserById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(id));
     }
 
     public User createUser(UserRequest userRequest) {
-        User user = new User();
-        user.setUsername(userRequest.getUsername());
-        user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
-        user.setRole(userRequest.getRole());
-        user.setEmail(userRequest.getEmail());
-        
+        User user = User.builder()
+                .username(userRequest.getUsername())
+                .password(passwordEncoder.encode(userRequest.getPassword()))
+                .role(userRequest.getRole())
+                .email(userRequest.getEmail())
+                .build();
         return userRepository.save(user);
     }
 

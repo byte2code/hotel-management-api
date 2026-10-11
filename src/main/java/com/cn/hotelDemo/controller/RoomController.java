@@ -78,8 +78,16 @@ public class RoomController {
 
 	@GetMapping("/getAll")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
-	@Operation(summary = "Get all rooms across all hotels (Admin only)")
-	public ResponseEntity<List<Room>> getAllRooms() {
-		return ResponseEntity.ok(roomService.getAllRooms());
+	@Operation(summary = "Get all rooms across all hotels with pagination (Admin only)")
+	public ResponseEntity<org.springframework.data.domain.Page<Room>> getAllRooms(
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "20") int size,
+			@RequestParam(defaultValue = "id") String sortBy,
+			@RequestParam(defaultValue = "asc") String direction) {
+		org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase("desc")
+				? org.springframework.data.domain.Sort.by(sortBy).descending()
+				: org.springframework.data.domain.Sort.by(sortBy).ascending();
+		org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
+		return ResponseEntity.ok(roomService.getAllRooms(pageable));
 	}
 }

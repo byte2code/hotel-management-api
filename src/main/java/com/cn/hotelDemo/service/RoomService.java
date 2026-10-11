@@ -86,6 +86,10 @@ public class RoomService {
 		return roomRepository.findAll();
 	}
 
+	public org.springframework.data.domain.Page<Room> getAllRooms(org.springframework.data.domain.Pageable pageable) {
+		return roomRepository.findAll(pageable);
+	}
+
 	private boolean overlaps(Booking booking, LocalDate checkInDate, LocalDate checkOutDate) {
 		return !checkOutDate.isBefore(booking.getCheckInDate()) && !checkInDate.isAfter(booking.getCheckOutDate());
 	}

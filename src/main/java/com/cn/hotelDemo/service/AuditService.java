@@ -46,6 +46,11 @@ public class AuditService {
 	}
 
 	@Transactional(readOnly = true)
+	public org.springframework.data.domain.Page<AuditLog> getAllAuditLogs(org.springframework.data.domain.Pageable pageable) {
+		return auditLogRepository.findAll(pageable);
+	}
+
+	@Transactional(readOnly = true)
 	public List<AuditLog> getAuditLogsByAction(String action) {
 		return auditLogRepository.findByActionOrderByCreatedAtDesc(action);
 	}

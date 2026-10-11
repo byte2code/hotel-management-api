@@ -29,8 +29,16 @@ public class AuditController {
 
 	@GetMapping("/getAll")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
-	@Operation(summary = "Get all audit logs (Admin only)")
-	public ResponseEntity<List<AuditLog>> getAllAuditLogs() {
-		return ResponseEntity.ok(auditService.getAllAuditLogs());
+	@Operation(summary = "Get all audit logs with pagination (Admin only)")
+	public ResponseEntity<org.springframework.data.domain.Page<AuditLog>> getAllAuditLogs(
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "createdAt") String sortBy,
+			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "desc") String direction) {
+		org.springframework.data.domain.Sort sort = direction.equalsIgnoreCase("desc")
+				? org.springframework.data.domain.Sort.by(sortBy).descending()
+				: org.springframework.data.domain.Sort.by(sortBy).ascending();
+		org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
+		return ResponseEntity.ok(auditService.getAllAuditLogs(pageable));
 	}
 }
