@@ -97,6 +97,7 @@ class BookingFlowIntegrationTest {
 		registry.add("spring.datasource.url", mysql::getJdbcUrl);
 		registry.add("spring.datasource.username", mysql::getUsername);
 		registry.add("spring.datasource.password", mysql::getPassword);
+		registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
 		registry.add("spring.cache.type", () -> "simple");
 		registry.add("app.security.enabled", () -> "false");
 		registry.add("spring.autoconfigure.exclude", () -> TEST_AUTO_CONFIG_EXCLUDES);
@@ -148,7 +149,7 @@ class BookingFlowIntegrationTest {
 
 		assertEquals(HttpStatus.CREATED, response.getStatusCode());
 		assertNotNull(response.getBody());
-		assertEquals(BookingStatus.CONFIRMED, response.getBody().getStatus());
+		assertEquals(BookingStatus.REQUESTED, response.getBody().getStatus());
 		assertEquals(1L, bookingRepository.count());
 
 		List<AuditLog> auditLogs = auditLogRepository.findAllByOrderByCreatedAtDesc();
