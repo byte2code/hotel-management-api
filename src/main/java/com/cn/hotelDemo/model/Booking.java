@@ -1,5 +1,6 @@
 package com.cn.hotelDemo.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -14,10 +15,21 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.math.BigDecimal;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "booking")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@EqualsAndHashCode(of = "id")
+@ToString(exclude = {"hotel", "room", "user"})
 public class Booking {
 
 	@Id
@@ -34,7 +46,11 @@ public class Booking {
 	private BigDecimal totalPrice;
 
 	@Enumerated(EnumType.STRING)
+	@Builder.Default
 	private BookingStatus status = BookingStatus.REQUESTED;
+
+	@Column(length = 500)
+	private String rejectionReason;
 
 	@ManyToOne
 	@JoinColumn(name = "hotel_id")
@@ -50,92 +66,4 @@ public class Booking {
 	@JoinColumn(name = "user_id")
 	@JsonIgnoreProperties({"account", "subscriptionList"})
 	private User user;
-
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-	public String getBookingReference() {
-		return bookingReference;
-	}
-
-	public void setBookingReference(String bookingReference) {
-		this.bookingReference = bookingReference;
-	}
-
-	public LocalDate getCheckInDate() {
-		return checkInDate;
-	}
-
-	public void setCheckInDate(LocalDate checkInDate) {
-		this.checkInDate = checkInDate;
-	}
-
-	public LocalDate getCheckOutDate() {
-		return checkOutDate;
-	}
-
-	public void setCheckOutDate(LocalDate checkOutDate) {
-		this.checkOutDate = checkOutDate;
-	}
-
-	public Integer getGuestCount() {
-		return guestCount;
-	}
-
-	public void setGuestCount(Integer guestCount) {
-		this.guestCount = guestCount;
-	}
-
-	public String getSpecialRequests() {
-		return specialRequests;
-	}
-
-	public void setSpecialRequests(String specialRequests) {
-		this.specialRequests = specialRequests;
-	}
-
-	public BigDecimal getTotalPrice() {
-		return totalPrice;
-	}
-
-	public void setTotalPrice(BigDecimal totalPrice) {
-		this.totalPrice = totalPrice;
-	}
-
-	public BookingStatus getStatus() {
-		return status;
-	}
-
-	public void setStatus(BookingStatus status) {
-		this.status = status;
-	}
-
-	public Hotel getHotel() {
-		return hotel;
-	}
-
-	public void setHotel(Hotel hotel) {
-		this.hotel = hotel;
-	}
-
-	public Room getRoom() {
-		return room;
-	}
-
-	public void setRoom(Room room) {
-		this.room = room;
-	}
-
-	public User getUser() {
-		return user;
-	}
-
-	public void setUser(User user) {
-		this.user = user;
-	}
 }

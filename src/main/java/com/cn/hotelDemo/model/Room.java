@@ -17,9 +17,21 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "room")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@EqualsAndHashCode(of = "id")
+@ToString(exclude = {"hotel", "bookings"})
 public class Room {
 
 	@Id
@@ -27,11 +39,15 @@ public class Room {
 	private Long id;
 
 	private String roomNumber;
-	private String roomType;
+
+	@Enumerated(EnumType.STRING)
+	private RoomType roomType;
+
 	private Integer capacity;
 	private BigDecimal nightlyRate;
 
 	@Enumerated(EnumType.STRING)
+	@Builder.Default
 	private RoomStatus status = RoomStatus.AVAILABLE;
 
 	@ManyToOne
@@ -41,69 +57,18 @@ public class Room {
 
 	@OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
 	@JsonIgnoreProperties({"room", "hotel", "user"})
+	@Builder.Default
 	private List<Booking> bookings = new ArrayList<>();
 
-	public Long getId() {
-		return id;
-	}
-
-	public void setId(Long id) {
-		this.id = id;
-	}
-
-	public String getRoomNumber() {
-		return roomNumber;
-	}
-
-	public void setRoomNumber(String roomNumber) {
-		this.roomNumber = roomNumber;
-	}
-
-	public String getRoomType() {
-		return roomType;
-	}
-
-	public void setRoomType(String roomType) {
-		this.roomType = roomType;
-	}
-
-	public Integer getCapacity() {
-		return capacity;
-	}
-
-	public void setCapacity(Integer capacity) {
-		this.capacity = capacity;
-	}
-
-	public BigDecimal getNightlyRate() {
-		return nightlyRate;
-	}
-
-	public void setNightlyRate(BigDecimal nightlyRate) {
-		this.nightlyRate = nightlyRate;
-	}
-
-	public RoomStatus getStatus() {
-		return status;
-	}
-
-	public void setStatus(RoomStatus status) {
-		this.status = status;
-	}
-
-	public Hotel getHotel() {
-		return hotel;
-	}
-
-	public void setHotel(Hotel hotel) {
-		this.hotel = hotel;
-	}
-
-	public List<Booking> getBookings() {
-		return bookings;
-	}
-
-	public void setBookings(List<Booking> bookings) {
-		this.bookings = bookings;
+	public void setRoomType(String roomTypeStr) {
+		if (roomTypeStr != null) {
+			try {
+				this.roomType = RoomType.valueOf(roomTypeStr.toUpperCase());
+			} catch (IllegalArgumentException e) {
+				this.roomType = RoomType.DELUXE;
+			}
+		} else {
+			this.roomType = null;
+		}
 	}
 }
