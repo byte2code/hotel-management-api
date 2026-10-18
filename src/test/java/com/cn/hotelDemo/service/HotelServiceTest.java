@@ -118,8 +118,54 @@ class HotelServiceTest {
 	}
 
 	@Test
-	void deleteHotelById_callsRepository() {
+	void deleteHotelById_softDeletesHotelAndRooms() {
+		com.cn.hotelDemo.model.Room room = com.cn.hotelDemo.model.Room.builder().id(101L).deleted(false).build();
+		Hotel hotel = Hotel.builder().id(1L).name("Sea View").rooms(new java.util.ArrayList<>(List.of(room))).deleted(false).build();
+		when(hotelRepository.findById(1L)).thenReturn(Optional.of(hotel));
+
 		hotelService.deleteHotelById(1L);
-		verify(hotelRepository).deleteById(1L);
+
+		org.junit.jupiter.api.Assertions.assertTrue(hotel.isDeleted());
+		org.junit.jupiter.api.Assertions.assertNotNull(hotel.getDeletedAt());
+		org.junit.jupiter.api.Assertions.assertTrue(room.isDeleted());
+		org.junit.jupiter.api.Assertions.assertNotNull(room.getDeletedAt());
+		verify(hotelRepository).save(hotel);
+	}
+
+	@Test
+	void getDeletedHotels_returnsDeletedHotels() {
+		Hotel deletedHotel = Hotel.builder().id(2L).name("Old Hotel").deleted(true).deletedAt(java.time.LocalDateTime.now()).build();
+		when(hotelRepository.findAllDeletedHotels()).thenReturn(List.of(deletedHotel));
+
+		List<Hotel> result = hotelService.getDeletedHotels();
+
+		assertEquals(1, result.size());
+		org.junit.jupiter.api.Assertions.assertTrue(result.get(0).isDeleted());
+		verify(hotelRepository).findAllDeletedHotels();
+	}
+
+	@Test
+	void restoreHotel_restoresSoftDeletedHotel() {
+		com.cn.hotelDemo.model.Room room = com.cn.hotelDemo.model.Room.builder().id(101L).deleted(true).deletedAt(java.time.LocalDateTime.now()).build();
+		Hotel deletedHotel = Hotel.builder().id(2L).name("Old Hotel").rooms(new java.util.ArrayList<>(List.of(room))).deleted(true).deletedAt(java.time.LocalDateTime.now()).build();
+		when(hotelRepository.findDeletedById(2L)).thenReturn(Optional.of(deletedHotel));
+		when(hotelRepository.save(deletedHotel)).thenReturn(deletedHotel);
+
+		Hotel restored = hotelService.restoreHotel(2L);
+
+		org.junit.jupiter.api.Assertions.assertFalse(restored.isDeleted());
+		org.junit.jupiter.api.Assertions.assertNull(restored.getDeletedAt());
+		org.junit.jupiter.api.Assertions.assertFalse(room.isDeleted());
+		org.junit.jupiter.api.Assertions.assertNull(room.getDeletedAt());
+		verify(hotelRepository).save(deletedHotel);
+	}
+
+	@Test
+	void restoreHotel_notFound_throwsException() {
+		when(hotelRepository.findDeletedById(99L)).thenReturn(Optional.empty());
+
+		org.junit.jupiter.api.Assertions.assertThrows(
+				com.cn.hotelDemo.exception.HotelNotFoundException.class,
+				() -> hotelService.restoreHotel(99L));
 	}
 }

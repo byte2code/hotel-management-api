@@ -90,6 +90,15 @@ public class RoomService {
 		return roomRepository.findAll(pageable);
 	}
 
+	@Transactional
+	@CacheEvict(cacheNames = "roomAvailability", allEntries = true)
+	public void deleteRoomById(Long id) {
+		Room room = getRoomById(id);
+		room.setDeleted(true);
+		room.setDeletedAt(java.time.LocalDateTime.now());
+		roomRepository.save(room);
+	}
+
 	private boolean overlaps(Booking booking, LocalDate checkInDate, LocalDate checkOutDate) {
 		return !checkOutDate.isBefore(booking.getCheckInDate()) && !checkInDate.isAfter(booking.getCheckOutDate());
 	}

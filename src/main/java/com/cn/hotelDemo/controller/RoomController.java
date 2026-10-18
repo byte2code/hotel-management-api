@@ -99,4 +99,13 @@ public class RoomController {
 				: org.springframework.data.domain.Page.empty();
 		return ResponseEntity.ok(responsePage);
 	}
+
+	@org.springframework.web.bind.annotation.DeleteMapping("/remove/id/{id}")
+	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
+	@Operation(summary = "Delete a room by ID (Admin only)")
+	@AuditLogged(action = "ROOM_DELETED", resourceType = "ROOM", resourceIdSpel = "#id")
+	public ResponseEntity<Void> deleteRoomById(@PathVariable Long id) {
+		roomService.deleteRoomById(id);
+		return ResponseEntity.noContent().build();
+	}
 }

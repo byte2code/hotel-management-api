@@ -98,4 +98,16 @@ class RoomServiceTest {
 		assertEquals(1, rooms.size());
 		assertEquals(10L, rooms.get(0).getId());
 	}
+
+	@Test
+	void deleteRoomById_softDeletesRoom() {
+		Room room = Room.builder().id(20L).roomNumber("201").deleted(false).build();
+		when(roomRepository.findById(20L)).thenReturn(Optional.of(room));
+
+		roomService.deleteRoomById(20L);
+
+		assertTrue(room.isDeleted());
+		assertNotNull(room.getDeletedAt());
+		verify(roomRepository).save(room);
+	}
 }

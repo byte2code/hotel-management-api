@@ -89,7 +89,33 @@ public class HotelService {
 	}
 
 	public void deleteHotelById(Long id) {
-		hotelRepository.deleteById(id);
+		Hotel hotel = getHotelById(id);
+		hotel.setDeleted(true);
+		hotel.setDeletedAt(java.time.LocalDateTime.now());
+		if (hotel.getRooms() != null) {
+			for (com.cn.hotelDemo.model.Room room : hotel.getRooms()) {
+				room.setDeleted(true);
+				room.setDeletedAt(java.time.LocalDateTime.now());
+			}
+		}
+		hotelRepository.save(hotel);
 	}
 
+	public List<Hotel> getDeletedHotels() {
+		return hotelRepository.findAllDeletedHotels();
+	}
+
+	public Hotel restoreHotel(Long id) {
+		Hotel hotel = hotelRepository.findDeletedById(id)
+				.orElseThrow(() -> new HotelNotFoundException("Hotel with ID " + id + " not found or is not deleted"));
+		hotel.setDeleted(false);
+		hotel.setDeletedAt(null);
+		if (hotel.getRooms() != null) {
+			for (com.cn.hotelDemo.model.Room room : hotel.getRooms()) {
+				room.setDeleted(false);
+				room.setDeletedAt(null);
+			}
+		}
+		return hotelRepository.save(hotel);
+	}
 }

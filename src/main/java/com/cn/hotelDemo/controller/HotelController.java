@@ -127,4 +127,19 @@ public class HotelController {
 	{
 		hotelService.deleteHotelById(id);
 	}
+
+	@GetMapping("/deleted")
+	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
+	@Operation(summary = "Get all soft-deleted hotels (Admin only)")
+	public ResponseEntity<List<HotelResponse>> getDeletedHotels() {
+		return ResponseEntity.ok(hotelMapper.toResponseList(hotelService.getDeletedHotels()));
+	}
+
+	@org.springframework.web.bind.annotation.PatchMapping("/restore/{id}")
+	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
+	@Operation(summary = "Restore a soft-deleted hotel (Admin only)")
+	@AuditLogged(action = "HOTEL_RESTORED", resourceType = "HOTEL", resourceIdSpel = "#id")
+	public ResponseEntity<HotelResponse> restoreHotel(@PathVariable Long id) {
+		return ResponseEntity.ok(hotelMapper.toResponse(hotelService.restoreHotel(id)));
+	}
 }

@@ -1,6 +1,7 @@
 package com.cn.hotelDemo.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import com.cn.hotelDemo.model.RoomStatus;
 import com.cn.hotelDemo.model.RoomType;
@@ -23,4 +24,6 @@ public class RoomResponse {
 	private RoomStatus status;
 	private Long hotelId;
 	private String hotelName;
+	private boolean deleted;
+	private LocalDateTime deletedAt;
 }

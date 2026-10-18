@@ -128,4 +128,12 @@ class RoomControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.content[0].roomNumber").value("201"));
 	}
+
+	@Test
+	void deleteRoomById_returnsNoContent() throws Exception {
+		mockMvc.perform(delete("/hotel/rooms/remove/id/20"))
+				.andExpect(status().isNoContent());
+
+		org.mockito.Mockito.verify(roomService).deleteRoomById(20L);
+	}
 }

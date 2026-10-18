@@ -29,5 +29,7 @@ public class HotelResponse {
 	private String starCategory;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
+	private boolean deleted;
+	private LocalDateTime deletedAt;
 	private List<RoomResponse> rooms;
 }

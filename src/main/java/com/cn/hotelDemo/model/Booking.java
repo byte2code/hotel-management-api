@@ -3,6 +3,9 @@ package com.cn.hotelDemo.model;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.Column;
@@ -54,11 +57,13 @@ public class Booking {
 
 	@ManyToOne
 	@JoinColumn(name = "hotel_id")
+	@NotFound(action = NotFoundAction.IGNORE)
 	@JsonIgnoreProperties({"rooms"})
 	private Hotel hotel;
 
 	@ManyToOne
 	@JoinColumn(name = "room_id")
+	@NotFound(action = NotFoundAction.IGNORE)
 	@JsonIgnoreProperties({"hotel", "bookings"})
 	private Room room;
 

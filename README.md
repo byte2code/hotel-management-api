@@ -3,10 +3,11 @@
 ![CI](https://github.com/byte2code/hotel-management-api/actions/workflows/ci.yml/badge.svg)
 ![Java](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-6DB33F?logo=springboot&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-83%20passed-brightgreen?logo=junit5&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-93%20passed-brightgreen?logo=junit5&logoColor=white)
 ![Coverage](https://img.shields.io/badge/coverage-JaCoCo%20Gate-brightgreen?logo=jacoco&logoColor=white)
 ![MapStruct](https://img.shields.io/badge/MapStruct-1.5.5-E05D44?logo=mapstruct&logoColor=white)
 ![RFC 9457](https://img.shields.io/badge/RFC%209457-Problem%20Details-blue)
+![Soft Delete](https://img.shields.io/badge/Soft%20Delete-Hibernate%206%20SQLRestriction-blueviolet)
 ![Testcontainers](https://img.shields.io/badge/Testcontainers-MySQL-blue?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -18,13 +19,13 @@ Swagger UI is the interactive API demo — no separate frontend needed.
 
 ---
 
-A **production-grade Spring Boot REST API** for managing hotels, rooms, and bookings. The application features a rich approval-based booking workflow, JWT/OAuth2 security, Redis caching, rate limiting via Bucket4j, async email notifications, custom Micrometer metrics, AOP-driven audit logging, WebSocket/STOMP push notifications, paginated endpoints, Swagger/OpenAPI 3 docs, distributed tracing via Micrometer/Zipkin, compile-time MapStruct response DTO mapping, RFC 9457 Problem Details error handling, validation groups, and a fully green GitHub Actions CI pipeline with JaCoCo test coverage enforcement backed by Testcontainers MySQL.
+A **production-grade Spring Boot REST API** for managing hotels, rooms, and bookings. The application features a rich approval-based booking workflow, JWT/OAuth2 security, Redis caching, rate limiting via Bucket4j, async email notifications, custom Micrometer metrics, AOP-driven audit logging, WebSocket/STOMP push notifications, paginated endpoints, Swagger/OpenAPI 3 docs, distributed tracing via Micrometer/Zipkin, compile-time MapStruct response DTO mapping, RFC 9457 Problem Details error handling, validation groups, Hibernate 6 soft delete with audit recovery endpoints, and a fully green GitHub Actions CI pipeline with JaCoCo test coverage enforcement backed by Testcontainers MySQL.
 
 ---
 
 ## What's New — Upgrade Highlights
 
-> These improvements were added across 14 phased commits on top of the original baseline.
+> These improvements were added across 15 phased commits on top of the original baseline.
 
 | Phase | Feature | Impact |
 |-------|---------|--------|
@@ -42,6 +43,7 @@ A **production-grade Spring Boot REST API** for managing hotels, rooms, and book
 | **12** | JaCoCo coverage gate & CI | Enforced 50% line coverage quality gate via `jacoco-maven-plugin` with automated XML/HTML report artifact upload in CI |
 | **13** | RFC 9457 Problem Details | Standardized all error responses to `application/problem+json` with `errorCode`, `timestamp`, `traceId`, and invalid fields map |
 | **14** | Validation Groups | Applied `OnCreate` vs `OnUpdate` Bean Validation groups to distinguish mandatory creation vs partial update fields |
+| **15** | Soft Delete & Recovery | Added `@SQLRestriction("deleted = false")`, `deleted`/`deletedAt` on `Hotel` & `Room`, safe deletion preserving booking history, plus `GET /hotel/deleted` and `PATCH /hotel/restore/{id}` |
 
 ---
 
@@ -230,7 +232,7 @@ hotel-management-api/
         │   ├── config/               ← HotelSecurityConfigTest (@WebMvcTest security rules)
         │   ├── controller/           ← HotelControllerTest, RoomControllerTest, BookingControllerTest, UserControllerTest, SecurityIntegrationTest
         │   ├── exception/            ← GlobalExceptionHandlerTest (RFC 9457 error contracts)
-        │   ├── integration/          ← BaseIntegrationTest, HotelIntegrationTest, BookingFlowIntegrationTest, EndToEndWorkflowIntegrationTest
+        │   ├── integration/          ← BaseIntegrationTest, HotelIntegrationTest, BookingFlowIntegrationTest, EndToEndWorkflowIntegrationTest, SoftDeleteIntegrationTest
         │   ├── mapper/               ← HotelMapperTest, RoomMapperTest, UserMapperTest, BookingMapperTest
         │   ├── service/              ← AuditServiceTest, BookingServiceTest, RoomServiceTest, UserServiceTest
         │   └── validation/           ← HotelRequestValidationTest (groups verification)
@@ -259,6 +261,8 @@ erDiagram
         String description
         Integer totalRooms
         String starCategory
+        Boolean deleted
+        LocalDateTime deletedAt
         LocalDateTime createdAt
         LocalDateTime updatedAt
     }
@@ -270,6 +274,8 @@ erDiagram
         Integer capacity
         BigDecimal nightlyRate
         RoomStatus status
+        Boolean deleted
+        LocalDateTime deletedAt
     }
 
     BOOKING {
@@ -553,19 +559,22 @@ bash scripts/load-test.sh
 | `GET` | `/hotel/getAll` | ADMIN | — |
 | `GET` | `/hotel/id/{id}` | NORMAL, ADMIN | — |
 | `PUT` | `/hotel/update/{id}` | ADMIN | ✅ Hotel update endpoint |
-| `DELETE` | `/hotel/remove/id/{id}` | ADMIN | — |
+| `DELETE` | `/hotel/remove/id/{id}` | ADMIN | ✅ Soft-deletes hotel & rooms (preserves booking history) |
+| `GET` | `/hotel/deleted` | ADMIN | ✅ List soft-deleted hotels for audit/recovery |
+| `PATCH` | `/hotel/restore/{id}` | ADMIN | ✅ Restore soft-deleted hotel & rooms |
 | `GET` | `/hotel/search?city=&name=` | ADMIN | ✅ Search by city/name |
 | `GET` | `/hotel/userDetail` | Authenticated (OIDC) | — |
 
 ### Room
 
-| Method | Path | Access |
-|--------|------|--------|
-| `POST` | `/hotel/rooms/create` | ADMIN |
-| `GET` | `/hotel/rooms/getAll` | ADMIN |
-| `GET` | `/hotel/rooms/id/{id}` | ADMIN |
-| `GET` | `/hotel/rooms/hotel/{hotelId}` | ADMIN |
-| `GET` | `/hotel/rooms/hotel/{hotelId}/available?checkInDate=YYYY-MM-DD&checkOutDate=YYYY-MM-DD` | ADMIN |
+| Method | Path | Access | New in Upgrade |
+|--------|------|--------|---------------|
+| `POST` | `/hotel/rooms/create` | ADMIN | — |
+| `GET` | `/hotel/rooms/getAll` | ADMIN | ✅ Paginated |
+| `GET` | `/hotel/rooms/id/{id}` | ADMIN | — |
+| `GET` | `/hotel/rooms/hotel/{hotelId}` | ADMIN | — |
+| `GET` | `/hotel/rooms/hotel/{hotelId}/available?checkInDate=YYYY-MM-DD&checkOutDate=YYYY-MM-DD` | ADMIN | ✅ Redis-cached |
+| `DELETE` | `/hotel/rooms/remove/id/{id}` | ADMIN | ✅ Soft-deletes room |
 
 ### Booking
 
@@ -832,17 +841,18 @@ INFO [6a5346b258484bc2-c24080ee3168f33d] c.c.h.filter.SecurityAuditFilter :
 
 ## Integration Test Suite
 
-The project ships an extensive **multi-layer test suite** with 83 tests across 18 test classes, all green on GitHub Actions CI (`ubuntu-latest`, JDK 17).
+The project ships an extensive **multi-layer test suite** with 93 tests across 20 test classes, all green on GitHub Actions CI (`ubuntu-latest`, JDK 17).
 
 | Test Class | Layer / Strategy | Coverage |
 |------------|------------------|----------|
 | `EndToEndWorkflowIntegrationTest` | `@SpringBootTest` + `@Testcontainers` + MySQLContainer | Full lifecycle: User → Hotel → Room → Booking (REQUESTED → CONFIRMED → CANCELLED) + Metrics + Audit |
 | `BookingFlowIntegrationTest` | `@SpringBootTest` + `@Testcontainers` + MySQLContainer | Booking happy path with WebSocket notification and audit log verification |
+| `SoftDeleteIntegrationTest` | `@SpringBootTest` + shared Spring context | Soft delete lifecycle: DELETE hotel → 404 on getById → absent in getAll → present in /deleted → restore via PATCH → booking references remain valid |
 | `HotelIntegrationTest` | `@SpringBootTest` + shared Spring context + `@WithMockUser(ADMIN)` | Full DB round-trip: POST hotel → assert persisted |
 | `SecurityIntegrationTest` | `@SpringBootTest` + shared Spring context | 6 security scenarios: 401, 200 public, NORMAL→403, ADMIN→200 |
 | `HotelSecurityConfigTest` | `@WebMvcTest` + `@Import(HotelSecurityConfig)` | Security rule assertions at the filter chain level |
-| `HotelControllerTest` | `@WebMvcTest(HotelController)` + MockMvc | Controller endpoints returning `HotelResponse` DTOs, pagination, search, validation |
-| `RoomControllerTest` | `@WebMvcTest(RoomController)` + MockMvc | Room endpoints returning `RoomResponse` DTOs, availability queries |
+| `HotelControllerTest` | `@WebMvcTest(HotelController)` + MockMvc | Controller endpoints returning `HotelResponse` DTOs, pagination, search, validation, soft-delete, and restore |
+| `RoomControllerTest` | `@WebMvcTest(RoomController)` + MockMvc | Room endpoints returning `RoomResponse` DTOs, availability queries, soft delete |
 | `BookingControllerTest` | `@WebMvcTest(BookingController)` + MockMvc | Booking creation, approval, and cancellation endpoints with DTO assertions |
 | `UserControllerTest` | `@WebMvcTest(UserController)` + MockMvc | User endpoints verifying `UserResponse` DTO without sensitive password |
 | `GlobalExceptionHandlerTest` | Unit / Mockito | RFC 9457 `ProblemDetail` contract verification, error codes, trace ID propagation |
@@ -852,7 +862,8 @@ The project ships an extensive **multi-layer test suite** with 83 tests across 1
 | `BookingMapperTest` | Unit | MapStruct `BookingMapper` entity ↔ `BookingDetailResponse` and `BookingResponse` |
 | `HotelRequestValidationTest` | Unit / Validator | Jakarta Bean Validation groups (`OnCreate` vs `OnUpdate`) |
 | `BookingServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Booking state machine: confirmed, rejected, invalid cancel transitions |
-| `RoomServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Availability lookup and Redis cache interaction |
+| `RoomServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Availability lookup, Redis cache interaction, soft delete |
+| `HotelServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Hotel management, soft deletion cascade to rooms, restore logic |
 | `UserServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | User registration, password encoding, and duplicate checks |
 | `AuditServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Audit log entry creation and persistence |
 | `RateLimitingFilterTest` | Unit / MockHttpServletRequest | Bucket4j token bucket rate limiting on sensitive routes |
@@ -865,6 +876,7 @@ The project ships an extensive **multi-layer test suite** with 83 tests across 1
 - **`@BeforeEach` cleanup** — All integration tests call `repository.deleteAll()` before each test to prevent data leakage.
 - **CSRF handling** — `MockMvc` POST requests include `.with(csrf())` to match real browser behavior.
 - **`@MockBean ClientRegistrationRepository`** — Prevents OAuth2 Client auto-configuration from failing when Keycloak/Google credentials are absent in CI.
+- **Soft Delete Safety** — `@SQLRestriction("deleted = false")` on `Hotel` and `Room` automatically filters deleted records from queries while `@NotFound(action = NotFoundAction.IGNORE)` on `Booking` preserves relational integrity for historical bookings.
 - **JaCoCo Quality Gate** — Enforces a minimum 50% line coverage requirement on business logic; automatically uploads HTML and XML coverage reports as workflow artifacts.
 
 ---

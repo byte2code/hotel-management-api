@@ -1,7 +1,7 @@
 package com.cn.hotelDemo.controller;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -102,5 +102,49 @@ class HotelControllerTest {
 		mockMvc.perform(get("/hotel/city/Tokyo"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].name").value("Tokyo Bay"));
+	}
+
+	@Test
+	void deleteHotelById_returnsOk() throws Exception {
+		mockMvc.perform(delete("/hotel/remove/id/1"))
+				.andExpect(status().isOk());
+
+		verify(hotelService).deleteHotelById(1L);
+	}
+
+	@Test
+	void getDeletedHotels_returnsList() throws Exception {
+		Hotel deletedHotel = Hotel.builder().id(5L).name("Archived Hotel").deleted(true).build();
+		com.cn.hotelDemo.dto.HotelResponse response = com.cn.hotelDemo.dto.HotelResponse.builder()
+				.id(5L)
+				.name("Archived Hotel")
+				.deleted(true)
+				.build();
+
+		when(hotelService.getDeletedHotels()).thenReturn(List.of(deletedHotel));
+		when(hotelMapper.toResponseList(List.of(deletedHotel))).thenReturn(List.of(response));
+
+		mockMvc.perform(get("/hotel/deleted"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].id").value(5L))
+				.andExpect(jsonPath("$[0].deleted").value(true));
+	}
+
+	@Test
+	void restoreHotel_returnsRestoredHotel() throws Exception {
+		Hotel restoredHotel = Hotel.builder().id(5L).name("Restored Hotel").deleted(false).build();
+		com.cn.hotelDemo.dto.HotelResponse response = com.cn.hotelDemo.dto.HotelResponse.builder()
+				.id(5L)
+				.name("Restored Hotel")
+				.deleted(false)
+				.build();
+
+		when(hotelService.restoreHotel(5L)).thenReturn(restoredHotel);
+		when(hotelMapper.toResponse(restoredHotel)).thenReturn(response);
+
+		mockMvc.perform(patch("/hotel/restore/5"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(5L))
+				.andExpect(jsonPath("$.deleted").value(false));
 	}
 }

@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hibernate.annotations.SQLRestriction;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.Column;
@@ -24,6 +26,7 @@ import lombok.ToString;
 
 @Entity
 @Table(name = "hotel")
+@SQLRestriction("deleted = false")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -50,6 +53,13 @@ public class Hotel {
 	private String description;
 	private Integer totalRooms;
 	private String starCategory;
+
+	@Builder.Default
+	@Column(name = "deleted", nullable = false)
+	private boolean deleted = false;
+
+	@Column(name = "deleted_at")
+	private LocalDateTime deletedAt;
 
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;
