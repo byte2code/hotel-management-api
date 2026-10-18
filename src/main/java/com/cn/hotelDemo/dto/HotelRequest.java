@@ -18,14 +18,14 @@ import lombok.NoArgsConstructor;
 @Builder
 public class HotelRequest {
 
-	@NotBlank(message = "Hotel name is required")
+	@NotBlank(message = "Hotel name is required", groups = com.cn.hotelDemo.dto.validation.OnCreate.class)
 	private String name;
 
-	@NotNull(message = "Rating is required")
+	@NotNull(message = "Rating is required", groups = com.cn.hotelDemo.dto.validation.OnCreate.class)
 	@Min(value = 1, message = "Rating must be at least 1")
 	private Long rating;
 
-	@NotBlank(message = "City is required")
+	@NotBlank(message = "City is required", groups = com.cn.hotelDemo.dto.validation.OnCreate.class)
 	private String city;
 
 	@Min(0)

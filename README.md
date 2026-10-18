@@ -3,7 +3,10 @@
 ![CI](https://github.com/byte2code/hotel-management-api/actions/workflows/ci.yml/badge.svg)
 ![Java](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-6DB33F?logo=springboot&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-passing-brightgreen?logo=junit5&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-83%20passed-brightgreen?logo=junit5&logoColor=white)
+![Coverage](https://img.shields.io/badge/coverage-JaCoCo%20Gate-brightgreen?logo=jacoco&logoColor=white)
+![MapStruct](https://img.shields.io/badge/MapStruct-1.5.5-E05D44?logo=mapstruct&logoColor=white)
+![RFC 9457](https://img.shields.io/badge/RFC%209457-Problem%20Details-blue)
 ![Testcontainers](https://img.shields.io/badge/Testcontainers-MySQL-blue?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -15,13 +18,13 @@ Swagger UI is the interactive API demo — no separate frontend needed.
 
 ---
 
-A **production-grade Spring Boot REST API** for managing hotels, rooms, and bookings. The application features a rich approval-based booking workflow, JWT/OAuth2 security, Redis caching, rate limiting via Bucket4j, async email notifications, custom Micrometer metrics, AOP-driven audit logging, WebSocket/STOMP push notifications, paginated endpoints, Swagger/OpenAPI 3 docs, distributed tracing via Micrometer/Zipkin, and a fully green GitHub Actions CI pipeline backed by Testcontainers MySQL.
+A **production-grade Spring Boot REST API** for managing hotels, rooms, and bookings. The application features a rich approval-based booking workflow, JWT/OAuth2 security, Redis caching, rate limiting via Bucket4j, async email notifications, custom Micrometer metrics, AOP-driven audit logging, WebSocket/STOMP push notifications, paginated endpoints, Swagger/OpenAPI 3 docs, distributed tracing via Micrometer/Zipkin, compile-time MapStruct response DTO mapping, RFC 9457 Problem Details error handling, validation groups, and a fully green GitHub Actions CI pipeline with JaCoCo test coverage enforcement backed by Testcontainers MySQL.
 
 ---
 
 ## What's New — Upgrade Highlights
 
-> These improvements were added across 10 phased commits on top of the original baseline.
+> These improvements were added across 14 phased commits on top of the original baseline.
 
 | Phase | Feature | Impact |
 |-------|---------|--------|
@@ -35,6 +38,10 @@ A **production-grade Spring Boot REST API** for managing hotels, rooms, and book
 | **8** | AOP audit logging | `@AuditLogged` annotation + `AuditAspect` with SpEL resource-ID extraction |
 | **9** | End-to-end test suite | `EndToEndWorkflowIntegrationTest` covering the full lifecycle on real MySQL via Testcontainers |
 | **10** | CI hardening | Fixed H2↔Testcontainers driver clash; all tests green on GitHub Actions |
+| **11** | Response DTOs & MapStruct | Eliminated JPA entity leakage, circular JSON dependencies, and password hash exposure across all controllers |
+| **12** | JaCoCo coverage gate & CI | Enforced 50% line coverage quality gate via `jacoco-maven-plugin` with automated XML/HTML report artifact upload in CI |
+| **13** | RFC 9457 Problem Details | Standardized all error responses to `application/problem+json` with `errorCode`, `timestamp`, `traceId`, and invalid fields map |
+| **14** | Validation Groups | Applied `OnCreate` vs `OnUpdate` Bean Validation groups to distinguish mandatory creation vs partial update fields |
 
 ---
 
@@ -53,12 +60,18 @@ flowchart TB
         OAuth["HotelSecurityConfig\n(JWT + OAuth2 + @PreAuthorize)"]
     end
 
-    subgraph API Layer
+    subgraph API & Error Layer
         Hotel["HotelController"]
         Room["RoomController"]
         Booking["BookingController"]
         User["UserController"]
         Audit["AuditController"]
+        GlobalErrors["GlobalExceptionHandler\n(RFC 9457 ProblemDetail)"]
+    end
+
+    subgraph Mapping Layer
+        Mappers["MapStruct Mappers\n(Type-Safe Bean Mapping)"]
+        DTOs["Response DTOs\n(Hotel, Room, User, Booking)"]
     end
 
     subgraph Service Layer
@@ -90,6 +103,8 @@ flowchart TB
     Swagger --> RateLimit --> AuditFilter --> OAuth
     WS --> Booking
     OAuth --> Hotel & Room & Booking & User & Audit
+    Hotel & Room & Booking & User -.-> GlobalErrors
+    Hotel & Room & Booking & User --> Mappers --> DTOs
     Hotel --> HS --> MySQL
     Room --> RS --> Redis & MySQL
     Booking --> BS --> MySQL
@@ -127,7 +142,10 @@ stateDiagram-v2
 | **Filter** | `RateLimitingFilter` | Per-user/IP rate limits via Bucket4j (before security) |
 | **Filter** | `SecurityAuditFilter` | Logs `user`, `traceId`, `method`, `URI` on every authenticated request |
 | **Security** | `HotelSecurityConfig` | JWT resource-server, OAuth2 login (Keycloak + Google), `@PreAuthorize` |
-| **API** | Controllers | REST endpoints; delegate to services; annotated with `@AuditLogged` |
+| **API** | Controllers | REST endpoints; validate inputs; delegate to services; map entities to response DTOs; annotated with `@AuditLogged` |
+| **Mapping** | MapStruct Mappers (`*Mapper`) | Compile-time type-safe conversion of domain entities to DTOs; prevents password exposure & circular references |
+| **Error Handling** | `GlobalExceptionHandler` | Translates domain exceptions into RFC 9457 `application/problem+json` standard payloads with `errorCode` and `traceId` |
+| **Validation** | Jakarta Bean Validation | Validation Groups (`OnCreate`, `OnUpdate`) for context-sensitive payload constraints |
 | **AOP** | `AuditAspect` | Intercepts `@AuditLogged` methods, evaluates SpEL, writes audit log entry |
 | **Service** | `BookingService` | Booking state machine, pessimistic room locking, price calculation, metrics |
 | **Service** | `NotificationService` | `@Async` email notifications on booking lifecycle events |
@@ -137,6 +155,7 @@ stateDiagram-v2
 | **Observability** | Micrometer + Zipkin | Distributed traces; custom booking counters; Actuator health/metrics |
 | **Events** | Spring App Events | `BookingConfirmedEvent`, `BookingCancelledEvent` → async notification listener |
 | **WebSocket** | STOMP/SockJS | Real-time push to `/topic/bookings/{hotelId}` on booking state changes |
+| **Quality** | JaCoCo Quality Gate | Enforces 50% line coverage gate via `jacoco-maven-plugin` during Maven verification |
 | **Test** | Testcontainers + MySQL | Real-DB integration tests in CI; `EndToEndWorkflowIntegrationTest` |
 
 ---
@@ -148,6 +167,9 @@ stateDiagram-v2
 | **Runtime** | Java 17, Spring Boot 3.3.5 |
 | **Web** | Spring Web MVC, Spring WebSocket, STOMP, SockJS |
 | **Security** | Spring Security, OAuth2 Resource Server, OAuth2 Client (Keycloak, Google) |
+| **DTO Mapping** | MapStruct 1.5.5.Final, Lombok-MapStruct-Binding |
+| **Error Contract** | RFC 9457 Problem Details (`ProblemDetail`, `application/problem+json`) |
+| **Validation** | Jakarta Bean Validation (Hibernate Validator) with Validation Groups (`OnCreate`, `OnUpdate`) |
 | **Data** | Spring Data JPA, Hibernate, MySQL 8, H2 (test) |
 | **Cache** | Spring Cache, Redis |
 | **Rate Limiting** | Bucket4j |
@@ -158,8 +180,9 @@ stateDiagram-v2
 | **Documentation** | Springdoc OpenAPI 3 (Swagger UI) |
 | **Build** | Maven, Maven Wrapper |
 | **Code Gen** | Lombok (`@Data`, `@Builder`, `@Slf4j`, etc.) |
+| **Coverage** | JaCoCo 0.8.12 (`jacoco-maven-plugin` with 50% line coverage enforcement) |
 | **Testing** | JUnit 5, Mockito, Testcontainers (MySQL), `@SpringBootTest`, `@WebMvcTest` |
-| **CI** | GitHub Actions (ubuntu-latest, JDK 17 Temurin) |
+| **CI** | GitHub Actions (ubuntu-latest, JDK 17 Temurin, JaCoCo artifact upload) |
 | **Templates** | Thymeleaf (login page), static HTML (ws-test.html) |
 
 ---
@@ -170,7 +193,7 @@ stateDiagram-v2
 hotel-management-api/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml                    ← GitHub Actions CI (push + PR to main)
+│       └── ci.yml                    ← GitHub Actions CI (Maven test + JaCoCo artifact upload)
 ├── scripts/
 │   └── load-test.sh                  ← Apache Bench load-test script
 ├── CHANGELOG.md
@@ -184,11 +207,13 @@ hotel-management-api/
     │   │   ├── annotation/           ← @AuditLogged (custom annotation)
     │   │   ├── aspect/               ← AuditAspect (AOP + SpEL evaluation)
     │   │   ├── config/               ← HotelSecurityConfig, PasswordEncoderConfig, OpenApiConfig, AsyncConfig
-    │   │   ├── controller/           ← Hotel, Room, Booking, User, Audit, Login
-    │   │   ├── dto/                  ← BookingRequest/Response, RejectionRequest, HotelRequest, RoomRequest, UserRequest
+    │   │   ├── controller/           ← Hotel, Room, Booking, User, Audit, Login (return DTOs)
+    │   │   ├── dto/                  ← Requests, Responses (HotelResponse, RoomResponse, UserResponse, BookingResponse, BookingDetailResponse)
+    │   │   │   └── validation/       ← OnCreate, OnUpdate (Jakarta Bean Validation groups)
     │   │   ├── event/                ← BookingConfirmedEvent, BookingCancelledEvent, NotificationListener (@Async)
-    │   │   ├── exception/            ← BookingNotFoundException, HotelNotFoundException, ApiError, GlobalExceptionHandler
+    │   │   ├── exception/            ← ErrorCode enum, GlobalExceptionHandler (RFC 9457 ProblemDetail), custom exceptions
     │   │   ├── filter/               ← RateLimitingFilter (Bucket4j), SecurityAuditFilter
+    │   │   ├── mapper/               ← HotelMapper, RoomMapper, UserMapper, BookingMapper (MapStruct)
     │   │   ├── metrics/              ← BookingMetrics (Micrometer counters + active-booking gauge)
     │   │   ├── model/                ← Hotel, Room, User, Booking, AuditLog, BookingStatus, RoomStatus, RoomType
     │   │   ├── repository/           ← JPA repositories (incl. pageable variants + pessimistic lock query)
@@ -203,10 +228,12 @@ hotel-management-api/
     └── test/
         ├── java/com/cn/hotelDemo/
         │   ├── config/               ← HotelSecurityConfigTest (@WebMvcTest security rules)
-        │   ├── controller/           ← SecurityIntegrationTest (6 security scenarios)
-        │   ├── integration/          ← BaseIntegrationTest, HotelIntegrationTest,
-        │   │                           BookingFlowIntegrationTest, EndToEndWorkflowIntegrationTest
-        │   └── service/              ← AuditServiceTest, BookingServiceTest, RoomServiceTest
+        │   ├── controller/           ← HotelControllerTest, RoomControllerTest, BookingControllerTest, UserControllerTest, SecurityIntegrationTest
+        │   ├── exception/            ← GlobalExceptionHandlerTest (RFC 9457 error contracts)
+        │   ├── integration/          ← BaseIntegrationTest, HotelIntegrationTest, BookingFlowIntegrationTest, EndToEndWorkflowIntegrationTest
+        │   ├── mapper/               ← HotelMapperTest, RoomMapperTest, UserMapperTest, BookingMapperTest
+        │   ├── service/              ← AuditServiceTest, BookingServiceTest, RoomServiceTest, UserServiceTest
+        │   └── validation/           ← HotelRequestValidationTest (groups verification)
         └── resources/
             └── application.yml       ← test datasource, cache=simple, security exclusions
 ```
@@ -660,15 +687,68 @@ bash scripts/load-test.sh
 }
 ```
 
-**Validation error response (400):**
+**User retrieval response (`GET /user/getUsers/2` — password hash omitted):**
 ```json
 {
+  "id": 2,
+  "username": "john",
+  "email": "john@example.com",
+  "role": "NORMAL"
+}
+```
+
+**Hotel response (`GET /hotel/id/1` via `HotelResponse` DTO):**
+```json
+{
+  "id": 1,
+  "name": "Sea View Inn",
+  "rating": 4,
+  "city": "Goa",
+  "discount": 15.0,
+  "address": "Beach Road, Calangute",
+  "state": "Goa",
+  "country": "India",
+  "phoneNumber": "+91-9876543210",
+  "email": "info@seaviewinn.com",
+  "website": "https://seaviewinn.com",
+  "description": "Luxury beachfront hotel with stunning ocean views.",
+  "totalRooms": 50,
+  "starCategory": "4-Star",
+  "createdAt": "2026-06-01T10:00:00",
+  "updatedAt": "2026-06-01T10:00:00",
+  "rooms": []
+}
+```
+
+**Validation error response (RFC 9457 `application/problem+json` — 400 Bad Request):**
+```json
+{
+  "type": "about:blank",
+  "title": "Bad Request",
   "status": 400,
-  "message": "Validation failed",
-  "errors": {
-    "checkOutDate": "must be a date in the present or in the future",
-    "guestCount": "must be greater than or equal to 1"
+  "detail": "Validation failed for request",
+  "instance": "/hotel/create",
+  "errorCode": "VALIDATION_FAILED",
+  "timestamp": "2026-10-18T20:30:00.123456",
+  "traceId": "6a5346b258484bc2",
+  "invalidFields": {
+    "name": "must not be blank",
+    "rating": "must be between 1 and 5"
   }
+}
+```
+
+**Entity not found response (RFC 9457 `application/problem+json` — 404 Not Found):**
+```json
+{
+  "type": "about:blank",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "Booking with ID 999 not found",
+  "instance": "/hotel/bookings/id/999",
+  "errorCode": "BOOKING_NOT_FOUND",
+  "timestamp": "2026-10-18T20:30:00.789101",
+  "traceId": "c24080ee3168f33d"
 }
 ```
 
@@ -752,27 +832,40 @@ INFO [6a5346b258484bc2-c24080ee3168f33d] c.c.h.filter.SecurityAuditFilter :
 
 ## Integration Test Suite
 
-The project ships a **multi-class test suite** across 8 test classes, all green on GitHub Actions CI (`ubuntu-latest`, JDK 17).
+The project ships an extensive **multi-layer test suite** with 83 tests across 18 test classes, all green on GitHub Actions CI (`ubuntu-latest`, JDK 17).
 
-| Test Class | Strategy | Coverage |
-|------------|----------|----------|
+| Test Class | Layer / Strategy | Coverage |
+|------------|------------------|----------|
 | `EndToEndWorkflowIntegrationTest` | `@SpringBootTest` + `@Testcontainers` + MySQLContainer | Full lifecycle: User → Hotel → Room → Booking (REQUESTED → CONFIRMED → CANCELLED) + Metrics + Audit |
 | `BookingFlowIntegrationTest` | `@SpringBootTest` + `@Testcontainers` + MySQLContainer | Booking happy path with WebSocket notification and audit log verification |
 | `HotelIntegrationTest` | `@SpringBootTest` + shared Spring context + `@WithMockUser(ADMIN)` | Full DB round-trip: POST hotel → assert persisted |
 | `SecurityIntegrationTest` | `@SpringBootTest` + shared Spring context | 6 security scenarios: 401, 200 public, NORMAL→403, ADMIN→200 |
 | `HotelSecurityConfigTest` | `@WebMvcTest` + `@Import(HotelSecurityConfig)` | Security rule assertions at the filter chain level |
+| `HotelControllerTest` | `@WebMvcTest(HotelController)` + MockMvc | Controller endpoints returning `HotelResponse` DTOs, pagination, search, validation |
+| `RoomControllerTest` | `@WebMvcTest(RoomController)` + MockMvc | Room endpoints returning `RoomResponse` DTOs, availability queries |
+| `BookingControllerTest` | `@WebMvcTest(BookingController)` + MockMvc | Booking creation, approval, and cancellation endpoints with DTO assertions |
+| `UserControllerTest` | `@WebMvcTest(UserController)` + MockMvc | User endpoints verifying `UserResponse` DTO without sensitive password |
+| `GlobalExceptionHandlerTest` | Unit / Mockito | RFC 9457 `ProblemDetail` contract verification, error codes, trace ID propagation |
+| `HotelMapperTest` | Unit | MapStruct `HotelMapper` entity ↔ DTO mapping and nested room mapping |
+| `RoomMapperTest` | Unit | MapStruct `RoomMapper` entity ↔ DTO conversion |
+| `UserMapperTest` | Unit | MapStruct `UserMapper` entity ↔ DTO conversion ensuring password omission |
+| `BookingMapperTest` | Unit | MapStruct `BookingMapper` entity ↔ `BookingDetailResponse` and `BookingResponse` |
+| `HotelRequestValidationTest` | Unit / Validator | Jakarta Bean Validation groups (`OnCreate` vs `OnUpdate`) |
 | `BookingServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Booking state machine: confirmed, rejected, invalid cancel transitions |
 | `RoomServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Availability lookup and Redis cache interaction |
+| `UserServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | User registration, password encoding, and duplicate checks |
 | `AuditServiceTest` | `@ExtendWith(MockitoExtension)` + mocks | Audit log entry creation and persistence |
+| `RateLimitingFilterTest` | Unit / MockHttpServletRequest | Bucket4j token bucket rate limiting on sensitive routes |
 
 ### Test Design Decisions
 
-- **Testcontainers MySQL** — `BookingFlowIntegrationTest` and `EndToEndWorkflowIntegrationTest` spin up a real MySQL container for production-parity testing.
+- **Testcontainers MySQL** — `BookingFlowIntegrationTest` and `EndToEndWorkflowIntegrationTest` spin up a real MySQL container for production-parity testing. In environments without Docker running, `@Testcontainers(disabledWithoutDocker = true)` allows local development without failures while running strictly in CI.
 - **CI driver fix** — Explicitly registers `com.mysql.cj.jdbc.Driver` in `BaseIntegrationTest` to prevent a Testcontainers↔Spring Boot driver-class clash when no `spring.datasource.driver-class-name` is set.
 - **Shared Spring context** — `HotelIntegrationTest` and `SecurityIntegrationTest` share a single `ApplicationContext` to reduce test startup overhead.
 - **`@BeforeEach` cleanup** — All integration tests call `repository.deleteAll()` before each test to prevent data leakage.
 - **CSRF handling** — `MockMvc` POST requests include `.with(csrf())` to match real browser behavior.
 - **`@MockBean ClientRegistrationRepository`** — Prevents OAuth2 Client auto-configuration from failing when Keycloak/Google credentials are absent in CI.
+- **JaCoCo Quality Gate** — Enforces a minimum 50% line coverage requirement on business logic; automatically uploads HTML and XML coverage reports as workflow artifacts.
 
 ---
 
@@ -785,15 +878,18 @@ flowchart LR
     Push["Git Push / PR"] --> Checkout["actions/checkout@v4"]
     Checkout --> JDK["Setup JDK 17\n(Temurin + Maven cache)"]
     JDK --> Test["mvn clean test"]
-    Test --> Report["Test report\n(all green ✅)"]
+    Test --> JaCoCo["JaCoCo Gate Check\n(Line coverage >= 50%)"]
+    JaCoCo --> Artifact["Upload JaCoCo Report\n(actions/upload-artifact@v4)"]
+    Artifact --> Report["Build & Test Status\n(All green ✅)"]
 
     subgraph Test Suite
-        Unit["Unit Tests\n(Mockito)"]
-        SliceTest["Slice Tests\n(@WebMvcTest)"]
+        Unit["Unit & Mapper Tests\n(Mockito + MapStruct)"]
+        Validation["Validation Group Tests\n(Hibernate Validator)"]
+        SliceTest["Web Slice Tests\n(@WebMvcTest)"]
         IT["Integration Tests\n(H2 + Testcontainers MySQL)"]
     end
 
-    Test --> Unit & SliceTest & IT
+    Test --> Unit & Validation & SliceTest & IT
 ```
 
 The test suite is designed to run **without any external infrastructure** in CI:
@@ -802,6 +898,7 @@ The test suite is designed to run **without any external infrastructure** in CI:
 - `spring.cache.type=simple` replaces Redis
 - `@MockBean ClientRegistrationRepository` eliminates OAuth2 client startup calls
 - No Keycloak or Google OIDC credentials required
+- Coverage reports are archived as build artifacts on every pipeline run
 
 ---
 

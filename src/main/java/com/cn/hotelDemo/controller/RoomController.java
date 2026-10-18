@@ -18,6 +18,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.format.annotation.DateTimeFormat.ISO;
 
 import com.cn.hotelDemo.dto.RoomRequest;
+import com.cn.hotelDemo.dto.RoomResponse;
+import com.cn.hotelDemo.mapper.RoomMapper;
 import com.cn.hotelDemo.model.Room;
 import com.cn.hotelDemo.annotation.AuditLogged;
 import com.cn.hotelDemo.service.RoomService;
@@ -35,51 +37,54 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class RoomController {
 
 	private final RoomService roomService;
-	public RoomController(RoomService roomService) {
+	private final RoomMapper roomMapper;
+
+	public RoomController(RoomService roomService, RoomMapper roomMapper) {
 		this.roomService = roomService;
+		this.roomMapper = roomMapper;
 	}
 
 	@PostMapping("/create")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
 	@Operation(summary = "Create a new room in a hotel")
 	@AuditLogged(action = "ROOM_CREATED", resourceType = "ROOM", resourceIdSpel = "#result.body.id")
-	public ResponseEntity<Room> createRoom(@Valid @RequestBody RoomRequest roomRequest, Authentication authentication) {
+	public ResponseEntity<RoomResponse> createRoom(@Valid @RequestBody RoomRequest roomRequest, Authentication authentication) {
 		Room room = roomService.createRoom(roomRequest);
-		return new ResponseEntity<>(room, HttpStatus.CREATED);
+		return new ResponseEntity<>(roomMapper.toResponse(room), HttpStatus.CREATED);
 	}
 
 	@GetMapping("/hotel/{hotelId}")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
 	@Operation(summary = "Get all rooms for a specific hotel")
-	public ResponseEntity<List<Room>> getRoomsByHotel(@PathVariable Long hotelId) {
-		return ResponseEntity.ok(roomService.getRoomsByHotelId(hotelId));
+	public ResponseEntity<List<RoomResponse>> getRoomsByHotel(@PathVariable Long hotelId) {
+		return ResponseEntity.ok(roomMapper.toResponseList(roomService.getRoomsByHotelId(hotelId)));
 	}
 
 	@GetMapping("/hotel/{hotelId}/available")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
 	@Operation(summary = "Check room availability between dates for a hotel")
 	@AuditLogged(action = "ROOM_AVAILABILITY_SEARCHED", resourceType = "ROOM", resourceIdSpel = "#hotelId")
-	public ResponseEntity<List<Room>> getAvailableRoomsByHotel(
+	public ResponseEntity<List<RoomResponse>> getAvailableRoomsByHotel(
 			@PathVariable Long hotelId,
 			Authentication authentication,
 			@RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate checkInDate,
 			@RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate checkOutDate) {
 		List<Room> rooms = roomService.getAvailableRoomsByHotelAndDates(hotelId, checkInDate, checkOutDate);
-		return ResponseEntity.ok(rooms);
+		return ResponseEntity.ok(roomMapper.toResponseList(rooms));
 	}
 
 	@GetMapping("/id/{id}")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
 	@Operation(summary = "Get a room by its ID")
-	public ResponseEntity<Room> getRoomById(@PathVariable Long id) {
+	public ResponseEntity<RoomResponse> getRoomById(@PathVariable Long id) {
 		Room room = roomService.getRoomById(id);
-		return ResponseEntity.ok(room);
+		return ResponseEntity.ok(roomMapper.toResponse(room));
 	}
 
 	@GetMapping("/getAll")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
 	@Operation(summary = "Get all rooms across all hotels with pagination (Admin only)")
-	public ResponseEntity<org.springframework.data.domain.Page<Room>> getAllRooms(
+	public ResponseEntity<org.springframework.data.domain.Page<RoomResponse>> getAllRooms(
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "20") int size,
 			@RequestParam(defaultValue = "id") String sortBy,
@@ -88,6 +93,10 @@ public class RoomController {
 				? org.springframework.data.domain.Sort.by(sortBy).descending()
 				: org.springframework.data.domain.Sort.by(sortBy).ascending();
 		org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-		return ResponseEntity.ok(roomService.getAllRooms(pageable));
+		org.springframework.data.domain.Page<Room> roomPage = roomService.getAllRooms(pageable);
+		org.springframework.data.domain.Page<RoomResponse> responsePage = roomPage != null
+				? roomPage.map(roomMapper::toResponse)
+				: org.springframework.data.domain.Page.empty();
+		return ResponseEntity.ok(responsePage);
 	}
 }

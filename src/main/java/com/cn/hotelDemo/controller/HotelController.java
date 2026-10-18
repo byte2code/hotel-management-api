@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 
 import com.cn.hotelDemo.dto.HotelRequest;
+import com.cn.hotelDemo.dto.HotelResponse;
+import com.cn.hotelDemo.mapper.HotelMapper;
 import com.cn.hotelDemo.model.Hotel;
 import com.cn.hotelDemo.service.HotelService;
 import com.cn.hotelDemo.annotation.AuditLogged;
@@ -35,9 +37,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class HotelController {
 
 	private final HotelService hotelService;
+	private final HotelMapper hotelMapper;
 
-	public HotelController(HotelService hotelService) {
+	public HotelController(HotelService hotelService, HotelMapper hotelMapper) {
 		this.hotelService = hotelService;
+		this.hotelMapper = hotelMapper;
 	}
 	
 	@GetMapping("/userDetail")
@@ -51,23 +55,23 @@ public class HotelController {
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
 	@Operation(summary = "Create a new hotel (Admin only)")
 	@AuditLogged(action = "HOTEL_CREATED", resourceType = "HOTEL", resourceIdSpel = "#result.id")
-	public Hotel createHotel(@Valid @RequestBody HotelRequest hotelRequest, Authentication authentication)
+	public HotelResponse createHotel(@org.springframework.validation.annotation.Validated(com.cn.hotelDemo.dto.validation.OnCreate.class) @RequestBody HotelRequest hotelRequest, Authentication authentication)
 	{
-		return hotelService.createHotel(hotelRequest);
+		return hotelMapper.toResponse(hotelService.createHotel(hotelRequest));
 	}
 	
 	@GetMapping("/id/{id}")
 	@PreAuthorize("hasRole('NORMAL') or hasAuthority('normal')")
 	@Operation(summary = "Get hotel by ID")
-	public Hotel getHotelById(@PathVariable Long id)
+	public HotelResponse getHotelById(@PathVariable Long id)
 	{
-		return hotelService.getHotelById(id);
+		return hotelMapper.toResponse(hotelService.getHotelById(id));
 	}
 	
 	@GetMapping("/getAll")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
 	@Operation(summary = "Get all hotels with pagination (Admin only)")
-	public ResponseEntity<org.springframework.data.domain.Page<Hotel>> getAllHotels(
+	public ResponseEntity<org.springframework.data.domain.Page<HotelResponse>> getAllHotels(
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "20") int size,
 			@RequestParam(defaultValue = "id") String sortBy,
@@ -76,39 +80,43 @@ public class HotelController {
 				? org.springframework.data.domain.Sort.by(sortBy).descending()
 				: org.springframework.data.domain.Sort.by(sortBy).ascending();
 		org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-		return ResponseEntity.ok(hotelService.getAllHotels(pageable));
+		org.springframework.data.domain.Page<Hotel> hotelPage = hotelService.getAllHotels(pageable);
+		org.springframework.data.domain.Page<HotelResponse> responsePage = hotelPage != null
+				? hotelPage.map(hotelMapper::toResponse)
+				: org.springframework.data.domain.Page.empty();
+		return ResponseEntity.ok(responsePage);
 	}
 
 	@PutMapping("/update/{id}")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
 	@Operation(summary = "Update an existing hotel (Admin only)")
 	@AuditLogged(action = "HOTEL_UPDATED", resourceType = "HOTEL", resourceIdSpel = "#id")
-	public Hotel updateHotel(@PathVariable Long id, @Valid @RequestBody HotelRequest hotelRequest) {
-		return hotelService.updateHotel(id, hotelRequest);
+	public HotelResponse updateHotel(@PathVariable Long id, @org.springframework.validation.annotation.Validated(com.cn.hotelDemo.dto.validation.OnUpdate.class) @RequestBody HotelRequest hotelRequest) {
+		return hotelMapper.toResponse(hotelService.updateHotel(id, hotelRequest));
 	}
 
 	@GetMapping("/city/{city}")
 	@PreAuthorize("hasRole('NORMAL') or hasAuthority('normal')")
 	@Operation(summary = "Get hotels by city")
-	public List<Hotel> getHotelsByCity(@PathVariable String city) {
-		return hotelService.getHotelsByCity(city);
+	public List<HotelResponse> getHotelsByCity(@PathVariable String city) {
+		return hotelMapper.toResponseList(hotelService.getHotelsByCity(city));
 	}
 
 	@GetMapping("/country/{country}")
 	@PreAuthorize("hasRole('NORMAL') or hasAuthority('normal')")
 	@Operation(summary = "Get hotels by country")
-	public List<Hotel> getHotelsByCountry(@PathVariable String country) {
-		return hotelService.getHotelsByCountry(country);
+	public List<HotelResponse> getHotelsByCountry(@PathVariable String country) {
+		return hotelMapper.toResponseList(hotelService.getHotelsByCountry(country));
 	}
 
 	@GetMapping("/search")
 	@PreAuthorize("hasRole('NORMAL') or hasAuthority('normal')")
 	@Operation(summary = "Search hotels by name, city, or minimum rating")
-	public List<Hotel> searchHotels(
+	public List<HotelResponse> searchHotels(
 			@RequestParam(required = false) String name,
 			@RequestParam(required = false) String city,
 			@RequestParam(required = false) Long rating) {
-		return hotelService.searchHotels(name, city, rating);
+		return hotelMapper.toResponseList(hotelService.searchHotels(name, city, rating));
 	}
 	
 	@DeleteMapping("/remove/id/{id}")

@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 
 import com.cn.hotelDemo.dto.UserRequest;
+import com.cn.hotelDemo.dto.UserResponse;
+import com.cn.hotelDemo.mapper.UserMapper;
 import com.cn.hotelDemo.model.User;
 import com.cn.hotelDemo.annotation.AuditLogged;
 import com.cn.hotelDemo.service.UserService;
@@ -28,15 +30,17 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class UserController {
 
     private final UserService userService;
+    private final UserMapper userMapper;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, UserMapper userMapper) {
         this.userService = userService;
+        this.userMapper = userMapper;
     }
 
     @GetMapping("/getUsers")
     @Operation(summary = "Get all users with pagination")
     @SecurityRequirement(name = "Bearer Authentication")
-    public org.springframework.http.ResponseEntity<org.springframework.data.domain.Page<User>> getUsers(
+    public org.springframework.http.ResponseEntity<org.springframework.data.domain.Page<UserResponse>> getUsers(
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size,
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "id") String sortBy,
@@ -45,22 +49,26 @@ public class UserController {
                 ? org.springframework.data.domain.Sort.by(sortBy).descending()
                 : org.springframework.data.domain.Sort.by(sortBy).ascending();
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-        return org.springframework.http.ResponseEntity.ok(userService.getUsers(pageable));
+        org.springframework.data.domain.Page<User> userPage = userService.getUsers(pageable);
+        org.springframework.data.domain.Page<UserResponse> responsePage = userPage != null
+                ? userPage.map(userMapper::toResponse)
+                : org.springframework.data.domain.Page.empty();
+        return org.springframework.http.ResponseEntity.ok(responsePage);
     }
 
     @GetMapping("/getUsers/{id}")
     @Operation(summary = "Get user by ID")
     @SecurityRequirement(name = "Bearer Authentication")
-    public User getUserById(@PathVariable Long id) {
-        return userService.getUserById(id);
+    public UserResponse getUserById(@PathVariable Long id) {
+        return userMapper.toResponse(userService.getUserById(id));
     }
 
 	@PostMapping("/createUser")
     @Operation(summary = "Register a new user (Public)")
     @AuditLogged(action = "USER_CREATED", resourceType = "USER", resourceIdSpel = "#result.id")
-	public User createUser(@Valid @RequestBody UserRequest userRequest)
+	public UserResponse createUser(@Valid @RequestBody UserRequest userRequest)
 	{
-		return userService.createUser(userRequest);
+		return userMapper.toResponse(userService.createUser(userRequest));
 	}
 
     @DeleteMapping("/remove/id/{id}")

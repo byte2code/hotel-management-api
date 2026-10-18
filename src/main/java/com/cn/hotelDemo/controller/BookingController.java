@@ -15,9 +15,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.access.AccessDeniedException;
 
+import com.cn.hotelDemo.dto.BookingDetailResponse;
 import com.cn.hotelDemo.dto.BookingRequest;
 import com.cn.hotelDemo.dto.BookingResponse;
 import com.cn.hotelDemo.dto.RejectionRequest;
+import com.cn.hotelDemo.mapper.BookingMapper;
 import com.cn.hotelDemo.model.Booking;
 import com.cn.hotelDemo.model.BookingStatus;
 import com.cn.hotelDemo.annotation.AuditLogged;
@@ -35,8 +37,11 @@ import jakarta.validation.Valid;
 public class BookingController {
 
 	private final BookingService bookingService;
-	public BookingController(BookingService bookingService) {
+	private final BookingMapper bookingMapper;
+
+	public BookingController(BookingService bookingService, BookingMapper bookingMapper) {
 		this.bookingService = bookingService;
+		this.bookingMapper = bookingMapper;
 	}
 
 	@PostMapping("/create")
@@ -54,15 +59,15 @@ public class BookingController {
 	@GetMapping("/id/{id}")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
 	@Operation(summary = "Get a booking by its ID")
-	public ResponseEntity<Booking> getBookingById(@PathVariable Long id) {
+	public ResponseEntity<BookingDetailResponse> getBookingById(@PathVariable Long id) {
 		Booking booking = bookingService.getBookingById(id);
-		return ResponseEntity.ok(booking);
+		return ResponseEntity.ok(bookingMapper.toDetailResponse(booking));
 	}
 
 	@GetMapping("/getAll")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
 	@Operation(summary = "Get all bookings with pagination (Admin only)")
-	public ResponseEntity<org.springframework.data.domain.Page<Booking>> getAllBookings(
+	public ResponseEntity<org.springframework.data.domain.Page<BookingDetailResponse>> getAllBookings(
 			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
 			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size,
 			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "id") String sortBy,
@@ -71,13 +76,17 @@ public class BookingController {
 				? org.springframework.data.domain.Sort.by(sortBy).descending()
 				: org.springframework.data.domain.Sort.by(sortBy).ascending();
 		org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-		return ResponseEntity.ok(bookingService.getAllBookings(pageable));
+		org.springframework.data.domain.Page<Booking> bookingPage = bookingService.getAllBookings(pageable);
+		org.springframework.data.domain.Page<BookingDetailResponse> responsePage = bookingPage != null
+				? bookingPage.map(bookingMapper::toDetailResponse)
+				: org.springframework.data.domain.Page.empty();
+		return ResponseEntity.ok(responsePage);
 	}
 
 	@GetMapping("/user/{userId}")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin') or hasRole('NORMAL') or hasAuthority('normal')")
 	@Operation(summary = "Get bookings by user ID with pagination")
-	public ResponseEntity<org.springframework.data.domain.Page<Booking>> getBookingsByUser(
+	public ResponseEntity<org.springframework.data.domain.Page<BookingDetailResponse>> getBookingsByUser(
 			@PathVariable Long userId,
 			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
 			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size,
@@ -87,13 +96,17 @@ public class BookingController {
 				? org.springframework.data.domain.Sort.by(sortBy).descending()
 				: org.springframework.data.domain.Sort.by(sortBy).ascending();
 		org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-		return ResponseEntity.ok(bookingService.getBookingsByUserId(userId, pageable));
+		org.springframework.data.domain.Page<Booking> bookingPage = bookingService.getBookingsByUserId(userId, pageable);
+		org.springframework.data.domain.Page<BookingDetailResponse> responsePage = bookingPage != null
+				? bookingPage.map(bookingMapper::toDetailResponse)
+				: org.springframework.data.domain.Page.empty();
+		return ResponseEntity.ok(responsePage);
 	}
 
 	@GetMapping("/hotel/{hotelId}")
 	@PreAuthorize("hasRole('ADMIN') or hasAuthority('admin')")
 	@Operation(summary = "Get bookings by hotel ID with pagination")
-	public ResponseEntity<org.springframework.data.domain.Page<Booking>> getBookingsByHotel(
+	public ResponseEntity<org.springframework.data.domain.Page<BookingDetailResponse>> getBookingsByHotel(
 			@PathVariable Long hotelId,
 			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
 			@org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size,
@@ -103,7 +116,11 @@ public class BookingController {
 				? org.springframework.data.domain.Sort.by(sortBy).descending()
 				: org.springframework.data.domain.Sort.by(sortBy).ascending();
 		org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, sort);
-		return ResponseEntity.ok(bookingService.getBookingsByHotelId(hotelId, pageable));
+		org.springframework.data.domain.Page<Booking> bookingPage = bookingService.getBookingsByHotelId(hotelId, pageable);
+		org.springframework.data.domain.Page<BookingDetailResponse> responsePage = bookingPage != null
+				? bookingPage.map(bookingMapper::toDetailResponse)
+				: org.springframework.data.domain.Page.empty();
+		return ResponseEntity.ok(responsePage);
 	}
 
 	@PatchMapping("/{id}/confirm")

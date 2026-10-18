@@ -33,6 +33,9 @@ class HotelControllerTest {
 	@MockBean
 	private HotelService hotelService;
 
+	@MockBean
+	private com.cn.hotelDemo.mapper.HotelMapper hotelMapper;
+
 	@Test
 	void createHotel_returnsHotel() throws Exception {
 		HotelRequest request = HotelRequest.builder()
@@ -48,7 +51,15 @@ class HotelControllerTest {
 				.rating(5L)
 				.build();
 
+		com.cn.hotelDemo.dto.HotelResponse response = com.cn.hotelDemo.dto.HotelResponse.builder()
+				.id(1L)
+				.name("Grand Luxury")
+				.city("Dubai")
+				.rating(5L)
+				.build();
+
 		when(hotelService.createHotel(any(HotelRequest.class))).thenReturn(hotel);
+		when(hotelMapper.toResponse(hotel)).thenReturn(response);
 
 		mockMvc.perform(post("/hotel/create")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -61,7 +72,14 @@ class HotelControllerTest {
 	@Test
 	void getHotelById_returnsHotel() throws Exception {
 		Hotel hotel = Hotel.builder().id(2L).name("Skyline Hotel").city("Tokyo").build();
+		com.cn.hotelDemo.dto.HotelResponse response = com.cn.hotelDemo.dto.HotelResponse.builder()
+				.id(2L)
+				.name("Skyline Hotel")
+				.city("Tokyo")
+				.build();
+
 		when(hotelService.getHotelById(2L)).thenReturn(hotel);
+		when(hotelMapper.toResponse(hotel)).thenReturn(response);
 
 		mockMvc.perform(get("/hotel/id/2"))
 				.andExpect(status().isOk())
@@ -72,7 +90,14 @@ class HotelControllerTest {
 	@Test
 	void getHotelsByCity_returnsList() throws Exception {
 		Hotel hotel = Hotel.builder().id(3L).name("Tokyo Bay").city("Tokyo").build();
+		com.cn.hotelDemo.dto.HotelResponse response = com.cn.hotelDemo.dto.HotelResponse.builder()
+				.id(3L)
+				.name("Tokyo Bay")
+				.city("Tokyo")
+				.build();
+
 		when(hotelService.getHotelsByCity("Tokyo")).thenReturn(List.of(hotel));
+		when(hotelMapper.toResponseList(List.of(hotel))).thenReturn(List.of(response));
 
 		mockMvc.perform(get("/hotel/city/Tokyo"))
 				.andExpect(status().isOk())

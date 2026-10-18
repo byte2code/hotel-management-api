@@ -37,6 +37,9 @@ class BookingControllerTest {
 	@MockBean
 	private BookingService bookingService;
 
+	@MockBean
+	private com.cn.hotelDemo.mapper.BookingMapper bookingMapper;
+
 	@Test
 	void createBooking_returnsCreated() throws Exception {
 		BookingRequest request = new BookingRequest(1L, 10L, 2L,

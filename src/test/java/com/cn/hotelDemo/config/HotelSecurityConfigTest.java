@@ -61,6 +61,9 @@ public class HotelSecurityConfigTest {
     private HotelService hotelService;
 
     @MockBean
+    private com.cn.hotelDemo.mapper.HotelMapper hotelMapper;
+
+    @MockBean
     private UserService userService;
 
     @MockBean
