@@ -67,7 +67,7 @@ class SoftDeleteIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
+    @WithMockUser(roles = {"ADMIN", "NORMAL"})
     void shouldSoftDeleteHotelAndFilterFromGetAll() throws Exception {
         Hotel hotel = Hotel.builder()
                 .name("Coastal Retreat")

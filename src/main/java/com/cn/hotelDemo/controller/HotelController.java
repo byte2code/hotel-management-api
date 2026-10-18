@@ -61,7 +61,7 @@ public class HotelController {
 	}
 	
 	@GetMapping("/id/{id}")
-	@PreAuthorize("hasRole('NORMAL') or hasAuthority('normal')")
+	@PreAuthorize("hasRole('NORMAL') or hasAuthority('normal') or hasRole('ADMIN') or hasAuthority('admin')")
 	@Operation(summary = "Get hotel by ID")
 	public HotelResponse getHotelById(@PathVariable Long id)
 	{
